@@ -1,0 +1,10 @@
+{
+  "name": "倉庫管理",
+  "short_name": "倉庫管理",
+  "description": "倉庫在庫管理アプリ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0D1B6E",
+  "theme_color": "#0D1B6E",
+  "orientation": "any"
+}

@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A237E">
+<meta name="apple-mobile-web-app-title" content="倉庫管理">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.json">
+<title>倉庫管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;background:#fff;color:#212121}
+body{display:flex;flex-direction:column}
+
+/* ── Mode bar ── */
+#mode-bar{background:#0D1B6E;display:flex;flex-shrink:0}
+.mode-tab{flex:1;padding:8px 2px;text-align:center;color:rgba(255,255,255,.5);font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
+.mode-tab.on{color:#fff;border-bottom-color:#FFEB3B}
+
+/* ── Stock: warehouse tabs ── */
+#wh-bar{background:#1A237E;display:flex;flex-shrink:0}
+.wh-tab{flex:1;padding:9px 4px;text-align:center;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
+.wh-tab.on{color:#fff;border-bottom-color:#FFEB3B}
+
+/* ── Stock: location tabs ── */
+#loc-bar{background:#E8EAF6;border-bottom:2px solid #3F51B5;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#loc-bar::-webkit-scrollbar{display:none}
+#loc-inner{display:flex;padding:5px 6px;gap:4px;min-width:max-content}
+.loc-tab{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:#fff;color:#3F51B5;border:1.5px solid #C5CAE9}
+.loc-tab.has{background:#C5CAE9;border-color:#3F51B5}
+.loc-tab.on{background:#3F51B5;color:#fff;border-color:#3F51B5}
+
+/* ── Jdg: product tabs (scrollable) ── */
+#jdg-prod-bar{background:#1B5E20;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#jdg-prod-bar::-webkit-scrollbar{display:none}
+#jdg-prod-inner{display:flex;padding:5px 8px;gap:5px;min-width:max-content}
+.jp-tab{padding:5px 13px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;color:rgba(255,255,255,.65);background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25)}
+.jp-tab.on{background:#fff;color:#1B5E20;border-color:#fff}
+.jp-tab.has{background:rgba(255,255,255,.22);color:rgba(255,255,255,.9)}
+
+/* ── Jdg: lot tabs ── */
+#jdg-lot-bar{background:#E8F5E9;border-bottom:2px solid #388E3C;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#jdg-lot-bar::-webkit-scrollbar{display:none}
+#jdg-lot-inner{display:flex;padding:5px 6px;gap:4px;min-width:max-content}
+.jl-tab{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:#fff;color:#388E3C;border:1.5px solid #A5D6A7}
+.jl-tab.on{background:#388E3C;color:#fff;border-color:#388E3C}
+.jl-add{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:#fff;color:#1565C0;border:1.5px dashed #90CAF9}
+.jl-add:active{background:#E3F2FD}
+
+/* ── Sub bar ── */
+#sub-bar{flex-shrink:0}
+.info-bar{background:#3F51B5;color:#fff;padding:3px 10px;font-size:11px;display:flex;gap:14px;line-height:1.6}
+.ib b{font-size:13px}
+.sum-bar{background:#1B5E20;color:#fff;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:8px;line-height:1.6}
+.sum-bar b{font-size:13px}
+.sbar-btn{padding:3px 9px;border:1px solid rgba(255,255,255,.45);border-radius:10px;background:transparent;color:#fff;font-size:11px;cursor:pointer;font-family:inherit}
+.jdg-info-bar{background:#388E3C;color:#fff;padding:3px 10px;font-size:11px;display:flex;gap:14px;line-height:1.6}
+
+/* ── Table wrap ── */
+#tbl-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+
+/* ── Table (stock) – horizontal scroll ── */
+.tbl-scroll{border-collapse:collapse;table-layout:fixed;min-width:600px;width:100%}
+/* ── Table (jdg) – fits screen ── */
+.tbl-fit{border-collapse:collapse;table-layout:auto;width:100%}
+thead{position:sticky;top:0;z-index:20}
+thead th{background:#283593;color:#fff;padding:7px 6px;font-size:12px;font-weight:700;text-align:left;border-right:1px solid rgba(255,255,255,.2);white-space:nowrap;user-select:none}
+thead th.th-del{background:#1A237E;position:sticky;left:0;z-index:25;text-align:center}
+thead th.th-jdg-del{background:#1B5E20;text-align:center;width:44px}
+.tbl-fit thead th{background:#2E7D32}
+.tbl-fit thead th.th-jdg-del{background:#1B5E20}
+tbody tr{border-bottom:1px solid #E8E8E8}
+tbody tr:nth-child(even){background:#F8F9FF}
+tbody tr:hover{background:#FFF9C4}
+tbody td:first-child{position:sticky;left:0;z-index:5;background:inherit}
+tbody tr:nth-child(even) td:first-child{background:#F8F9FF}
+tbody tr:hover td:first-child{background:#FFF9C4}
+td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
+.tbl-fit tbody tr:nth-child(even){background:#F1F8E9}
+.tbl-fit tbody tr:hover{background:#DCEDC8}
+.tbl-fit tbody tr:nth-child(even) td:first-child{background:#F1F8E9}
+.tbl-fit tbody tr:hover td:first-child{background:#DCEDC8}
+
+/* ── Inputs ── */
+.ci{width:100%;padding:7px 6px;border:none;background:transparent;font-size:14px;color:#212121;font-family:inherit;outline:none;height:40px}
+.ci:focus{background:#FFFDE7;box-shadow:inset 0 0 0 2px #F9A825}
+.cs{width:100%;padding:7px 4px 7px 6px;border:none;background:transparent;font-size:13px;color:#212121;font-family:inherit;outline:none;cursor:pointer;height:40px;-webkit-appearance:none;appearance:none}
+.cs:focus{background:#FFFDE7;box-shadow:inset 0 0 0 2px #F9A825}
+@keyframes af{0%{background:#C8E6C9;box-shadow:inset 0 0 0 2px #388E3C}100%{background:transparent;box-shadow:none}}
+.af{animation:af 1.6s ease-out}
+.lot-hint{font-size:10px;color:#9E9E9E;padding:0 6px 3px;display:block;line-height:1}
+
+/* ── Column widths (stock) ── */
+.td-del{width:44px;min-width:44px;text-align:center}
+.td-prod{width:90px;min-width:90px}
+.td-lot{width:115px;min-width:115px}
+.td-bags{width:62px;min-width:62px}
+.td-jdg{width:88px;min-width:88px}
+.td-notes{width:150px;min-width:150px}
+.td-nc{width:110px;min-width:110px}
+.td-lpfx{width:56px;min-width:56px;text-align:center;font-size:13px;font-weight:700;color:#5C6BC0}
+
+/* ── Delete button ── */
+.del{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.del:active{background:#C62828;color:#fff}
+.del-g{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.del-g:active{background:#C62828;color:#fff}
+
+/* ── Empty / Add rows ── */
+.empty-msg td,.empty-msg-d{padding:28px;text-align:center;color:#9E9E9E;font-size:14px;font-style:italic}
+.add-tr td{padding:0;border-bottom:none}
+.add-tr-btn{width:100%;padding:10px 6px;background:#E8F5E9;border:none;border-top:1.5px dashed #81C784;color:#2E7D32;font-size:13px;font-weight:700;cursor:pointer;text-align:left;font-family:inherit}
+.add-tr-btn:active{background:#C8E6C9}
+.no-lot-msg{padding:40px 20px;text-align:center;color:#9E9E9E;font-size:14px}
+.no-lot-msg b{display:block;font-size:18px;margin-bottom:8px;color:#388E3C}
+
+/* ── Summary tree ── */
+#sum-content{min-height:100%}
+.sp-prod{display:flex;align-items:center;gap:8px;padding:11px 12px;background:#E8EAF6;border-bottom:1.5px solid #C5CAE9;cursor:pointer;user-select:none}
+.sp-prod:active{background:#C5CAE9}
+.sp-chev{font-size:11px;color:#3F51B5;width:14px;flex-shrink:0;font-style:normal}
+.sp-name{font-size:15px;font-weight:700;flex:1;color:#1A237E}
+.sp-tot{font-size:13px;font-weight:700;color:#3F51B5;white-space:nowrap}
+.sp-lot{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 30px;background:#F3F4FE;border-bottom:1px solid #E8EAF6;cursor:pointer;user-select:none}
+.sp-lot:active{background:#E8EAF6}
+.sp-lname{font-size:13px;font-weight:700;flex:1;color:#283593}
+.sp-ltot{font-size:12px;color:#3F51B5;white-space:nowrap}
+.sp-jdg-row{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 48px;background:#fff;border-bottom:1px solid #F0F0F0}
+.sp-badge{padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700;flex-shrink:0}
+.sp-bags{font-size:13px;font-weight:700;flex:1}
+.sp-locs{font-size:10px;color:#9E9E9E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+
+/* ── Bottom bar ── */
+#btm{background:#F5F5F5;border-top:1px solid #E0E0E0;padding:7px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn-green{background:#388E3C;color:#fff;border:none;border-radius:18px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-green:active{opacity:.85}
+.btn-blue{background:#1565C0;color:#fff;border:none;border-radius:18px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit;margin-left:auto}
+.btn-blue:active{opacity:.85}
+
+/* ── Snack ── */
+#snack{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:9px 18px;border-radius:6px;font-size:13px;z-index:999;transition:transform .3s;white-space:nowrap;pointer-events:none}
+#snack.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Dialog ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end}
+.dlg{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%}
+.dlg-t{font-size:17px;font-weight:700;margin-bottom:14px}
+.dlg-sub{font-size:13px;color:#616161;margin-bottom:12px}
+.dlg-input{width:100%;padding:12px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:18px;margin-bottom:14px;outline:none;font-family:inherit;letter-spacing:2px}
+.dlg-input:focus{border-color:#388E3C}
+.dlg-ok{width:100%;padding:13px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+.dlg-ok:active{opacity:.85}
+.dlg-o{padding:13px 0;font-size:16px;border-bottom:1px solid #EEE;cursor:pointer;display:flex;align-items:center;gap:10px}
+.dlg-o:last-of-type{border-bottom:none}
+.dlg-o:active{color:#1565C0}
+.dlg-c{margin-top:6px;padding:12px 0;font-size:16px;color:#C62828;text-align:center;cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<div id="snack"></div>
+<div id="mode-bar">
+  <div class="mode-tab on" id="mt-stock"   onclick="setMode('stock')">📦 在庫管理</div>
+  <div class="mode-tab"    id="mt-summary" onclick="setMode('summary')">📊 在庫一覧</div>
+  <div class="mode-tab"    id="mt-jdg"     onclick="setMode('jdg')">📋 判定表</div>
+</div>
+<!-- stock bars -->
+<div id="wh-bar"></div>
+<div id="loc-bar"><div id="loc-inner"></div></div>
+<!-- jdg bars -->
+<div id="jdg-prod-bar" style="display:none"><div id="jdg-prod-inner"></div></div>
+<div id="jdg-lot-bar" style="display:none"><div id="jdg-lot-inner"></div></div>
+<!-- shared -->
+<div id="sub-bar"></div>
+<div id="tbl-wrap"></div>
+<div id="btm"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────
+const WH = {
+  '1号倉庫':['1-1','1-2','1-3','1-4','1-5','1-6','1-7','1-8','1-9','1-10',
+             '1-11','1-12','1-13','1-14','1-15','1-16','1-17','1-18','1-19',
+             '1号倉庫通路右','1号倉庫通路左'],
+  'ひさし': ['ひさし1','ひさし2','ひさし3','ひさし4','ひさし5'],
+  'B倉庫':  ['B-1','B-2','B-3','B-4','B-5','B-6','B-7','B-8','B-9'],
+  'C倉庫':  ['CA-1','CA-2','CA-3','CA-4','CA-5','CA-6','CA-7','CA-8','CA-9','CA-10',
+             'CA-11','CA-12','CA-13','CA-14','CA-15','CA-16','CA-17','CA-18','CA-19','CA-20','CA-21',
+             'CB-1','CB-2','CB-3','CB-4','CB-5','CB-6','CB-7','CB-8','CB-9','CB-10',
+             'CB-11','CB-12','CB-13','CB-14','CB-15','CB-16','CB-17','CB-18','CB-19','CB-20','CB-21',
+             'C倉庫通路左','C倉庫通路右']
+};
+const PRODS = ['600S','600H','645','300S','300S-A','100F','シリカA','TPS','SPA','6B'];
+const JDGS  = ['O','N','△','300H','中身SA N','X'];
+const JCOL  = {
+  'O':{'bg':'#E8F5E9','fg':'#2E7D32'},
+  'N':{'bg':'#E3F2FD','fg':'#1565C0'},
+  '△':{'bg':'#FFF9C4','fg':'#F57F17'},
+  '300H':{'bg':'#EDE7F6','fg':'#4527A0'},
+  '中身SA N':{'bg':'#FBE9E7','fg':'#BF360C'},
+  'X':{'bg':'#FFEBEE','fg':'#C62828'},
+};
+
+// ── State ────────────────────────────────────────────────────
+let curMode    = 'stock';
+let curWH      = '1号倉庫';
+let curLoc     = WH['1号倉庫'][0];
+let curJdgProd = PRODS[0];
+let curJdgLot  = null;
+let expandedProds = new Set();
+let expandedLots  = new Set();
+
+// ── DB ───────────────────────────────────────────────────────
+// db.stock[wh::loc]  = [{id,prod,lot,lotPfx,bags,jdg,notes,nc}]
+// db.log             = [{wh,loc,prod,lot,bags,jdg,notes,nc,at}]
+// db.jdgTable[prod][lotPfx] = [{id,sn,jdg,notes}]
+//   sn = 製造番号(6桁), lotPfx = 先頭3桁ロット
+let db = {stock:{}, log:[], jdgTable:{}};
+let _store = null;
+
+function initStore(){
+  const ok=s=>{try{s.setItem('_t','1');s.removeItem('_t');return true;}catch(e){return false;}};
+  if(ok(localStorage)){_store=localStorage;}
+  else if(ok(sessionStorage)){
+    _store=sessionStorage;
+    setTimeout(()=>snack('プライベートモード: タブを閉じるとデータが消えます'),800);
+  } else {
+    setTimeout(()=>snack('⚠ ストレージ無効: データは保存されません'),800);
+  }
+}
+
+function loadDB(){
+  if(!_store){db={stock:{},log:[],jdgTable:{}};return;}
+  try{
+    let s=_store.getItem('wh_v4');
+    if(!s){
+      let old=null;
+      try{old=localStorage.getItem('wh_v3');}catch(e){}
+      if(!old)try{old=_store.getItem('wh_v3');}catch(e){}
+      if(old){
+        db=JSON.parse(old);
+        if(Array.isArray(db.jdgTable)){
+          const arr=db.jdgTable; db.jdgTable={};
+          arr.forEach(r=>{
+            if(!r.prod||!r.jdg) return;
+            const pfx=(r.lot||'').slice(0,3)||'000';
+            if(!db.jdgTable[r.prod]) db.jdgTable[r.prod]={};
+            if(!db.jdgTable[r.prod][pfx]) db.jdgTable[r.prod][pfx]=[];
+            db.jdgTable[r.prod][pfx].push({id:uid(),sn:r.lot||'',jdg:r.jdg,notes:r.tmpl||''});
+          });
+        }
+        try{localStorage.removeItem('wh_v3');}catch(e){}
+        try{_store.removeItem('wh_v3');}catch(e){}
+      }
+    } else { db=JSON.parse(s); }
+    if(!db.stock)    db.stock={};
+    if(!db.log)      db.log=[];
+    if(!db.jdgTable||Array.isArray(db.jdgTable)) db.jdgTable={};
+  } catch(e){ console.error('loadDB:',e); db={stock:{},log:[],jdgTable:{}}; }
+}
+function saveDB(){
+  if(!_store) return;
+  try{_store.setItem('wh_v4',JSON.stringify(db));}
+  catch(e){console.error('saveDB:',e.name,e.message);}
+}
+function key(wh,loc){ return wh+'::'+loc; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtDT(iso){ if(!iso)return ''; const d=new Date(iso); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function lotPfx(lot){ return lot ? String(lot).trim().slice(0,3) : ''; }
+
+// ── Judgment lookup ──────────────────────────────────────────
+// Priority: exact serial → lot-level default (sn=3桁) → prefix match
+// Also falls back to no-product entries if prod-specific not found
+function lookupJdg(prod, sn){
+  if(!sn||sn.length<3) return null;
+  const pfx=lotPfx(sn);
+  const tryEntries=entries=>{
+    if(!entries||!entries.length) return null;
+    // 1. Exact 6-digit match
+    const exact=entries.find(e=>e.sn===sn); if(exact) return exact;
+    // 2. Lot-level default: entry whose sn == 3-digit lot prefix
+    const lotDef=entries.find(e=>e.sn===pfx); if(lotDef) return lotDef;
+    // 3. Any prefix match (sn starts with entry's sn)
+    return entries.find(e=>e.sn&&sn.startsWith(e.sn))||null;
+  };
+  // Try product-specific first, then any product match
+  return tryEntries((db.jdgTable[prod]||{})[pfx])
+      || tryEntries((db.jdgTable['']||{})[pfx])
+      || null;
+}
+
+// ── Collect from DOM ─────────────────────────────────────────
+function collectStockRows(){
+  return [...document.querySelectorAll('#tbody tr.dr')].map(tr=>({
+    id:tr.dataset.id, prod:tr.querySelector('.fp').value,
+    lot:tr.querySelector('.fl').value.trim(),
+    lotPfx:lotPfx(tr.querySelector('.fl').value),
+    bags:parseInt(tr.querySelector('.fb').value)||50,
+    jdg:tr.querySelector('.jdg-cell')?.dataset.jdg||'',
+    notes:tr.querySelector('.fn').value,
+    nc:tr.querySelector('.fc').value,
+  }));
+}
+function jBadgeHTML(jdg){
+  if(!jdg) return '<span style="color:#9E9E9E;padding:0 8px;font-size:13px">—</span>';
+  const c=JCOL[jdg]||{bg:'#EEE',fg:'#616161'};
+  return `<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:13px;font-weight:700;background:${c.bg};color:${c.fg}">${jdg}</span>`;
+}
+function collectJdgRows(){
+  return [...document.querySelectorAll('#tbody tr.jr')].map(tr=>({
+    id:tr.dataset.id,
+    sn:tr.querySelector('.jsn').value.trim(),
+    jdg:tr.querySelector('.jj').value,
+    notes:tr.querySelector('.jn').value,
+    nc:tr.querySelector('.jnc').value,
+  }));
+}
+
+function autoSave(){
+  if(curMode==='stock'&&document.querySelector('#tbody tr.dr')){
+    db.stock[key(curWH,curLoc)]=collectStockRows();
+  } else if(curMode==='jdg'&&curJdgLot&&document.querySelector('#tbody tr.jr')){
+    if(!db.jdgTable[curJdgProd]) db.jdgTable[curJdgProd]={};
+    db.jdgTable[curJdgProd][curJdgLot]=collectJdgRows();
+  }
+  saveDB();
+  if(curMode==='stock'){ renderInfoBar(); renderLocTabs(); }
+  if(curMode==='summary') renderSummary();
+  if(curMode==='jdg') renderJdgProdTabs();
+}
+
+// ── Mode switch ───────────────────────────────────────────────
+function setMode(m){
+  autoSave();
+  curMode=m;
+  ['stock','summary','jdg'].forEach(x=>document.getElementById('mt-'+x).classList.toggle('on',x===m));
+  const S=id=>document.getElementById(id).style.display='';
+  const H=id=>document.getElementById(id).style.display='none';
+  H('wh-bar'); H('loc-bar'); H('jdg-prod-bar'); H('jdg-lot-bar');
+  if(m==='stock'){
+    S('wh-bar'); S('loc-bar');
+    renderWhTabs(); renderLocTabs(); renderInfoBar();
+    setTblWrap('<table class="tbl-scroll"><thead id="tbl-head"></thead><tbody id="tbody"></tbody></table>');
+    renderStockTable();
+  } else if(m==='summary'){
+    renderSumBar();
+    setTblWrap('<div id="sum-content"></div>');
+    renderSummary();
+  } else {
+    S('jdg-prod-bar'); S('jdg-lot-bar');
+    renderJdgProdTabs(); renderJdgLotTabs(); renderJdgInfoBar();
+    renderJdgTableContent();
+  }
+  renderBtm();
+}
+function setTblWrap(html){ document.getElementById('tbl-wrap').innerHTML=html; }
+
+// ── Stock: warehouse / location tabs ─────────────────────────
+function renderWhTabs(){
+  document.getElementById('wh-bar').innerHTML=Object.keys(WH).map(wh=>
+    `<div class="wh-tab ${wh===curWH?'on':''}" onclick="selectWH('${wh}')">${wh}</div>`).join('');
+}
+function renderLocTabs(){
+  document.getElementById('loc-inner').innerHTML=WH[curWH].map(loc=>{
+    const rows=db.stock[key(curWH,loc)]||[];
+    const has=rows.some(r=>r.lot||r.prod);
+    return `<div class="loc-tab ${curLoc===loc?'on':''} ${has&&curLoc!==loc?'has':''}" onclick="selectLoc('${loc}')">${loc}</div>`;
+  }).join('');
+  document.querySelector('#loc-inner .on')?.scrollIntoView({inline:'center',behavior:'smooth'});
+}
+function selectWH(wh){ autoSave(); curWH=wh; curLoc=WH[wh][0]; renderWhTabs(); renderLocTabs(); renderInfoBar(); renderStockTable(); }
+function selectLoc(loc){ autoSave(); curLoc=loc; renderLocTabs(); renderInfoBar(); renderStockTable(); document.querySelector('#loc-inner .on')?.scrollIntoView({inline:'center',behavior:'smooth'}); }
+
+// ── Sub bars ─────────────────────────────────────────────────
+function renderInfoBar(){
+  const rows=db.stock[key(curWH,curLoc)]||[];
+  const bags=rows.reduce((s,r)=>s+(r.bags||0),0);
+  document.getElementById('sub-bar').innerHTML=`<div class="info-bar">
+    <span class="ib">番地: <b>${curLoc}</b></span>
+    <span class="ib">パレット: <b>${rows.length}</b></span>
+    <span class="ib">袋数: <b>${bags}</b></span>
+    <span class="ib">トン: <b>${(bags*0.02).toFixed(2)}</b></span>
+  </div>`;
+}
+function renderSumBar(){
+  let tb=0,tp=0;
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>(db.stock[key(wh,loc)]||[]).forEach(r=>{tb+=(r.bags||0);tp++;})));
+  document.getElementById('sub-bar').innerHTML=`<div class="sum-bar">
+    <span>総在庫: <b>${tb}袋</b> / <b>${tp}P</b></span>
+    <button class="sbar-btn" onclick="expandAll()">全展開</button>
+    <button class="sbar-btn" onclick="collapseAll()">全折りたたみ</button>
+  </div>`;
+}
+function renderJdgInfoBar(){
+  const lots=Object.keys((db.jdgTable[curJdgProd])||{});
+  const cnt=lots.reduce((s,l)=>s+((db.jdgTable[curJdgProd][l])||[]).length,0);
+  document.getElementById('sub-bar').innerHTML=`<div class="jdg-info-bar">
+    <span class="ib">品種: <b>${curJdgProd}</b></span>
+    ${curJdgLot?`<span class="ib">ロット: <b>${curJdgLot}</b></span>`:''}
+    <span class="ib">登録数: <b>${cnt}</b>件</span>
+  </div>`;
+}
+
+// ── Stock table ───────────────────────────────────────────────
+function renderStockTable(){
+  document.getElementById('tbl-head').innerHTML=`<tr>
+    <th class="th-del td-del">出庫</th>
+    <th class="td-prod">品名</th>
+    <th class="td-lot">製造番号</th>
+    <th class="td-bags">袋数</th>
+    <th class="td-jdg">判定</th>
+    <th class="td-notes">備考</th>
+    <th class="td-nc">不適合番号</th>
+    <th class="td-lpfx">ロット</th>
+  </tr>`;
+  const rows=db.stock[key(curWH,curLoc)]||[];
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  if(!rows.length){
+    const em=document.createElement('tr'); em.className='empty-msg';
+    em.innerHTML='<td colspan="8">まだ記録がありません。「＋ 入庫を追加」で追加。</td>';
+    tbody.appendChild(em);
+  } else { rows.forEach(r=>tbody.appendChild(makeStockRow(r))); }
+  const at=document.createElement('tr'); at.className='add-tr';
+  at.innerHTML='<td colspan="8"><button class="add-tr-btn" onclick="addStockRow()">＋ 行を追加（入庫）</button></td>';
+  tbody.appendChild(at);
+}
+function makeStockRow(data){
+  const tr=document.createElement('tr'); tr.className='dr'; tr.dataset.id=data.id;
+  const pOpts=PRODS.map(p=>`<option value="${p}"${data.prod===p?' selected':''}>${p}</option>`).join('');
+  const pfx=data.lotPfx||lotPfx(data.lot);
+  tr.innerHTML=`
+    <td class="td-del"><button class="del" onclick="delStockRow('${data.id}')">✕</button></td>
+    <td class="td-prod"><select class="cs fp" onchange="onProdChange(this);autoSave()">
+      <option value="">—</option>${pOpts}</select></td>
+    <td class="td-lot">
+      <input class="ci fl" type="text" value="${esc(data.lot)}"
+        oninput="onLotInput(this)" onblur="onLotBlur(this)" placeholder="製造番号（6桁）">
+    </td>
+    <td class="td-bags"><input class="ci fb" type="number" value="${data.bags||50}" min="1" onblur="autoSave()"></td>
+    <td class="td-jdg" style="text-align:center;padding:4px">
+      <div class="jdg-cell" data-jdg="${esc(data.jdg)}">${jBadgeHTML(data.jdg)}</div></td>
+    <td class="td-notes"><input class="ci fn" type="text" value="${esc(data.notes)}" onblur="autoSave()" placeholder="備考"></td>
+    <td class="td-nc"><input class="ci fc" type="text" readonly value="${esc(data.nc)}"
+      placeholder="(判定表から自動)" style="background:#F3F4FE;color:#37474F;cursor:default"></td>
+    <td class="td-lpfx"><span id="lh_${data.id}">${pfx||''}</span></td>`;
+  return tr;
+}
+let _lt;
+function onLotInput(inp){
+  const tr=inp.closest('tr'), id=tr.dataset.id, pfx=lotPfx(inp.value);
+  const h=document.getElementById('lh_'+id); if(h) h.textContent=pfx||'';
+  clearTimeout(_lt);
+  // 6桁入力完了で即時参照、途中入力は500ms待ち
+  if(inp.value.trim().length>=6) tryAutoFill(tr);
+  else _lt=setTimeout(()=>tryAutoFill(tr),500);
+}
+function onLotBlur(inp){ clearTimeout(_lt); tryAutoFill(inp.closest('tr')); autoSave(); }
+function onProdChange(sel){ const tr=sel.closest('tr'); if(tr.querySelector('.fl').value.trim()) tryAutoFill(tr); }
+function tryAutoFill(tr){
+  const prod=tr.querySelector('.fp').value, sn=tr.querySelector('.fl').value.trim();
+  if(!sn) return;
+  const m=lookupJdg(prod,sn); if(!m) return;
+  // 判定バッジ更新（読み取り専用）
+  const jCell=tr.querySelector('.jdg-cell');
+  if(jCell){
+    jCell.dataset.jdg=m.jdg;
+    jCell.innerHTML=jBadgeHTML(m.jdg);
+    jCell.classList.remove('af'); void jCell.offsetWidth; jCell.classList.add('af');
+  }
+  // 不適合番号（readonly・自動入力のみ）
+  if(m.nc!==undefined){ const ncEl=tr.querySelector('.fc'); ncEl.value=m.nc; }
+  // 備考テンプレート（空の場合のみ）
+  if(m.notes){ const nEl=tr.querySelector('.fn'); if(!nEl.value) nEl.value=m.notes; }
+  autoSave();
+}
+function addStockRow(){
+  document.querySelector('#tbody .empty-msg')?.remove();
+  const lastProd=document.querySelector('#tbody tr.dr:last-of-type .fp')?.value||'';
+  const r={id:uid(),prod:lastProd,lot:'',lotPfx:'',bags:50,jdg:'',notes:'',nc:''};
+  document.getElementById('tbody').insertBefore(makeStockRow(r), document.querySelector('#tbody .add-tr'));
+  autoSave();
+  document.querySelector('#tbody tr.dr:last-of-type .fl')?.focus();
+}
+function delStockRow(id){
+  const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
+  const lot=tr.querySelector('.fl').value.trim(), label=lot?`製造番号 ${lot}`:'この行';
+  if(!confirm(`${label} を出庫（削除）しますか？`)) return;
+  db.log.push({wh:curWH,loc:curLoc,prod:tr.querySelector('.fp').value,lot,
+    lotPfx:lotPfx(lot),bags:parseInt(tr.querySelector('.fb').value)||0,
+    jdg:tr.querySelector('.fj').value,notes:tr.querySelector('.fn').value,
+    nc:tr.querySelector('.fc').value,at:new Date().toISOString()});
+  tr.remove();
+  if(!document.querySelector('#tbody tr.dr')){
+    const em=document.createElement('tr'); em.className='empty-msg';
+    em.innerHTML='<td colspan="8">まだ記録がありません。</td>';
+    document.getElementById('tbody').insertBefore(em,document.querySelector('#tbody .add-tr'));
+  }
+  autoSave(); snack(`${label} を出庫しました`);
+}
+
+// ── Judgment table ────────────────────────────────────────────
+function renderJdgProdTabs(){
+  document.getElementById('jdg-prod-inner').innerHTML=PRODS.map(p=>{
+    const hasSomeData=Object.keys(db.jdgTable[p]||{}).some(l=>(db.jdgTable[p][l]||[]).length>0);
+    return `<div class="jp-tab ${p===curJdgProd?'on':''} ${hasSomeData&&p!==curJdgProd?'has':''}"
+      onclick="selectJdgProd('${p}')">${p}</div>`;
+  }).join('');
+}
+function renderJdgLotTabs(){
+  const lots=Object.keys(db.jdgTable[curJdgProd]||{}).sort();
+  document.getElementById('jdg-lot-inner').innerHTML=
+    lots.map(l=>`<div class="jl-tab ${l===curJdgLot?'on':''}" onclick="selectJdgLot('${l}')">${l}</div>`).join('')+
+    `<div class="jl-add" onclick="addJdgLot()">＋ ロット追加</div>`;
+  document.querySelector('#jdg-lot-inner .on')?.scrollIntoView({inline:'center',behavior:'smooth'});
+}
+function selectJdgProd(p){ autoSave(); curJdgProd=p; curJdgLot=null; renderJdgProdTabs(); renderJdgLotTabs(); renderJdgInfoBar(); renderJdgTableContent(); }
+function selectJdgLot(l){ autoSave(); curJdgLot=l; renderJdgLotTabs(); renderJdgInfoBar(); renderJdgTableContent(); }
+
+function addJdgLot(){
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">ロットを追加</div>
+    <div class="dlg-sub">${curJdgProd} のロット番号（先頭3桁）を入力</div>
+    <input class="dlg-input" id="lot-inp" type="text" maxlength="6" placeholder="例: 806" inputmode="numeric">
+    <button class="dlg-ok" onclick="confirmAddLot()">追加</button>
+    <div class="dlg-c" onclick="closeOv()">キャンセル</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeOv();});
+  setTimeout(()=>{ const el=document.getElementById('lot-inp'); if(el){el.focus();el.addEventListener('keydown',e=>{if(e.key==='Enter')confirmAddLot();});} },100);
+}
+function confirmAddLot(){
+  const val=(document.getElementById('lot-inp')?.value||'').trim();
+  if(!val){ snack('ロット番号を入力してください'); return; }
+  const pfx=val.slice(0,3);
+  closeOv();
+  if(!db.jdgTable[curJdgProd]) db.jdgTable[curJdgProd]={};
+  if(!db.jdgTable[curJdgProd][pfx]) db.jdgTable[curJdgProd][pfx]=[];
+  saveDB(); curJdgLot=pfx;
+  renderJdgProdTabs(); renderJdgLotTabs(); renderJdgInfoBar(); renderJdgTableContent(); renderBtm();
+  snack(`${curJdgProd} ロット ${pfx} を追加しました`);
+}
+
+function renderJdgTableContent(){
+  if(!curJdgLot){
+    setTblWrap(`<div class="no-lot-msg"><b>📋</b>左のタブでロットを選択するか<br>「＋ ロット追加」で新しいロットを作成してください</div>`);
+    return;
+  }
+  setTblWrap('<table class="tbl-fit"><thead id="tbl-head"></thead><tbody id="tbody"></tbody></table>');
+  const entries=(db.jdgTable[curJdgProd]||{})[curJdgLot]||[];
+  document.getElementById('tbl-head').innerHTML=`<tr>
+    <th class="th-jdg-del">削除</th>
+    <th style="min-width:120px">製造番号<br><span style="font-weight:400;font-size:10px;opacity:.8">ロット: ${curJdgLot}</span></th>
+    <th style="min-width:80px">判定</th>
+    <th style="min-width:120px">不適合番号</th>
+    <th>備考テンプレート</th>
+  </tr>`;
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  if(!entries.length){
+    const em=document.createElement('tr'); em.className='empty-msg';
+    em.innerHTML=`<td colspan="4">「＋ 行を追加」で ${curJdgProd} ロット ${curJdgLot} の製造番号を登録</td>`;
+    tbody.appendChild(em);
+  } else { entries.forEach(e=>tbody.appendChild(makeJdgRow(e))); }
+  const at=document.createElement('tr'); at.className='add-tr';
+  at.innerHTML='<td colspan="4"><button class="add-tr-btn" onclick="addJdgRow()">＋ 5行を連番追加</button></td>';
+  tbody.appendChild(at);
+}
+
+function makeJdgRow(data){
+  const tr=document.createElement('tr'); tr.className='jr'; tr.dataset.id=data.id;
+  const jOpts=JDGS.map(j=>`<option value="${j}"${data.jdg===j?' selected':''}>${j}</option>`).join('');
+  tr.innerHTML=`
+    <td style="width:44px;text-align:center"><button class="del-g" onclick="delJdgRow('${data.id}')">✕</button></td>
+    <td><input class="ci jsn" type="text" value="${esc(data.sn)}" onblur="autoSave()"
+      placeholder="${curJdgLot}___" style="letter-spacing:1px"></td>
+    <td style="width:80px"><select class="cs jj" onchange="autoSave()">
+      <option value="">—</option>${jOpts}</select></td>
+    <td><input class="ci jnc" type="text" value="${esc(data.nc||'')}" onblur="autoSave()" placeholder="不適合番号"></td>
+    <td><input class="ci jn" type="text" value="${esc(data.notes||'')}" onblur="autoSave()" placeholder="備考テンプレート"></td>`;
+  return tr;
+}
+function addJdgRow(){
+  document.querySelector('#tbody .empty-msg')?.remove();
+  const tbody=document.getElementById('tbody');
+  const addTr=document.querySelector('#tbody .add-tr');
+
+  // Find max serial suffix among DOM rows + DB entries
+  const domVals=[...document.querySelectorAll('#tbody tr.jr .jsn')]
+    .map(i=>i.value.trim()).filter(v=>v.startsWith(curJdgLot)&&v.length===6);
+  const dbVals=((db.jdgTable[curJdgProd]||{})[curJdgLot]||[])
+    .map(e=>(e.sn||'')).filter(v=>v.startsWith(curJdgLot)&&v.length===6);
+  const allVals=[...domVals,...dbVals];
+  const maxN=allVals.length ? Math.max(...allVals.map(v=>parseInt(v.slice(3))||0)) : 0;
+
+  const start=maxN+1;
+  for(let i=0;i<5;i++){
+    const sn=curJdgLot+String(start+i).padStart(3,'0');
+    tbody.insertBefore(makeJdgRow({id:uid(),sn,jdg:'',notes:''}),addTr);
+  }
+  autoSave();
+  const rows=[...document.querySelectorAll('#tbody tr.jr')];
+  rows[Math.max(0,rows.length-5)]?.querySelector('.jsn')?.focus();
+}
+function delJdgRow(id){
+  const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
+  const sn=tr.querySelector('.jsn').value;
+  if(!confirm(`製造番号 ${sn||'この行'} を削除しますか？`)) return;
+  tr.remove();
+  if(!document.querySelector('#tbody tr.jr')){
+    const em=document.createElement('tr'); em.className='empty-msg';
+    em.innerHTML=`<td colspan="4">${curJdgProd} ロット ${curJdgLot} の登録がありません。</td>`;
+    document.getElementById('tbody').insertBefore(em,document.querySelector('#tbody .add-tr'));
+  }
+  autoSave(); snack('削除しました');
+}
+
+// ── Summary ───────────────────────────────────────────────────
+function buildSummaryData(){
+  const data={};
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
+    (db.stock[key(wh,loc)]||[]).forEach(r=>{
+      if(!r.prod&&!r.lot) return;
+      const prod=r.prod||'（品名なし）', pfx=r.lotPfx||lotPfx(r.lot)||'—', jdg=r.jdg||'—';
+      if(!data[prod]) data[prod]={bags:0,pallets:0,lots:{}};
+      data[prod].bags+=(r.bags||0); data[prod].pallets++;
+      if(!data[prod].lots[pfx]) data[prod].lots[pfx]={bags:0,pallets:0,jdgs:{}};
+      data[prod].lots[pfx].bags+=(r.bags||0); data[prod].lots[pfx].pallets++;
+      if(!data[prod].lots[pfx].jdgs[jdg]) data[prod].lots[pfx].jdgs[jdg]={bags:0,pallets:0,locs:[]};
+      data[prod].lots[pfx].jdgs[jdg].bags+=(r.bags||0); data[prod].lots[pfx].jdgs[jdg].pallets++;
+      data[prod].lots[pfx].jdgs[jdg].locs.push(loc);
+    });
+  }));
+  return data;
+}
+function renderSummary(){
+  renderSumBar();
+  const data=buildSummaryData(), prods=Object.keys(data);
+  const sc=document.getElementById('sum-content'); if(!sc) return;
+  if(!prods.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
+  prods.sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
+  let html='';
+  prods.forEach(prod=>{
+    const pd=data[prod], open=expandedProds.has(prod), ep=prod.replace(/'/g,"\\'");
+    html+=`<div class="sp-prod" onclick="toggleProd('${ep}')">
+      <i class="sp-chev">${open?'▼':'▶'}</i><span class="sp-name">${prod}</span>
+      <span class="sp-tot">${pd.bags}袋 / ${pd.pallets}P</span></div>`;
+    if(open){
+      Object.keys(pd.lots).sort().forEach(pfx=>{
+        const ld=pd.lots[pfx], lk=(prod+'::'+pfx).replace(/'/g,"\\'"), lo=expandedLots.has(prod+'::'+pfx);
+        html+=`<div class="sp-lot" onclick="toggleLot('${lk}')">
+          <i class="sp-chev">${lo?'▼':'▶'}</i><span class="sp-lname">ロット ${pfx}</span>
+          <span class="sp-ltot">${ld.bags}袋 / ${ld.pallets}P</span></div>`;
+        if(lo){
+          const jdgs=Object.keys(ld.jdgs).sort((a,b)=>(JDGS.indexOf(a)<0?99:JDGS.indexOf(a))-(JDGS.indexOf(b)<0?99:JDGS.indexOf(b)));
+          jdgs.forEach(jdg=>{
+            const jd=ld.jdgs[jdg], c=JCOL[jdg]||{bg:'#EEE',fg:'#616161'};
+            const locs=[...new Set(jd.locs)], locStr=locs.slice(0,4).join(', ')+(locs.length>4?` 他${locs.length-4}箇所`:'');
+            html+=`<div class="sp-jdg-row">
+              <span class="sp-badge" style="background:${c.bg};color:${c.fg}">${jdg}</span>
+              <span class="sp-bags">${jd.bags}袋 (${jd.pallets}P)</span>
+              <span class="sp-locs" title="${locs.join(', ')}">${locStr}</span></div>`;
+          });
+        }
+      });
+    }
+  });
+  sc.innerHTML=html;
+}
+function toggleProd(p){ expandedProds.has(p)?expandedProds.delete(p):expandedProds.add(p); renderSummary(); }
+function toggleLot(k){ expandedLots.has(k)?expandedLots.delete(k):expandedLots.add(k); renderSummary(); }
+function expandAll(){ const d=buildSummaryData(); Object.keys(d).forEach(p=>{ expandedProds.add(p); Object.keys(d[p].lots).forEach(l=>expandedLots.add(p+'::'+l)); }); renderSummary(); }
+function collapseAll(){ expandedProds.clear(); expandedLots.clear(); renderSummary(); }
+
+// ── Bottom bar ────────────────────────────────────────────────
+function renderBtm(){
+  const b=document.getElementById('btm');
+  if(curMode==='stock')
+    b.innerHTML=`<button class="btn-green" onclick="addStockRow()">＋ 入庫を追加</button><button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
+  else if(curMode==='jdg'&&curJdgLot)
+    b.innerHTML=`<button class="btn-green" onclick="addJdgRow()">＋ 5行を連番追加</button><button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
+  else
+    b.innerHTML=`<button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
+}
+
+// ── Snack ────────────────────────────────────────────────────
+let _st;
+function snack(msg){ const el=document.getElementById('snack'); el.textContent=msg; el.classList.add('show'); clearTimeout(_st); _st=setTimeout(()=>el.classList.remove('show'),2500); }
+
+// ── Menu ─────────────────────────────────────────────────────
+function openMenu(){
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">メニュー</div>
+    <div class="dlg-o" onclick="expCSV();closeOv()">📊 CSVエクスポート（現在庫）</div>
+    <div class="dlg-o" onclick="expLogCSV();closeOv()">📋 出庫履歴CSVエクスポート</div>
+    <div class="dlg-o" onclick="expJSON();closeOv()">💾 データバックアップ（JSON）</div>
+    <div class="dlg-o" onclick="impJSON();closeOv()">📂 データを読み込む（JSON）</div>
+    <div class="dlg-o" onclick="printCurrent();closeOv()">🖨 この番地を印刷</div>
+    <div class="dlg-o" onclick="printAll();closeOv()">🖨 全データ印刷</div>
+    <div class="dlg-o" style="color:#C62828" onclick="if(confirm('全データを削除しますか？')){db={stock:{},log:[],jdgTable:{}};saveDB();setMode('stock');closeOv();snack('削除しました')}">⚠️ 全データ削除</div>
+    <div class="dlg-c" onclick="closeOv()">キャンセル</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeOv();});
+}
+function closeOv(){ document.querySelector('.ov')?.remove(); }
+
+// ── Exports ──────────────────────────────────────────────────
+function expCSV(){
+  const hdr=['倉庫','番地','品名','製造番号','ロット','袋数','判定','備考','不適合番号'];
+  const rows=[];
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
+    (db.stock[key(wh,loc)]||[]).forEach(r=>{
+      if(r.lot||r.prod) rows.push([wh,loc,r.prod,r.lot,r.lotPfx||lotPfx(r.lot),r.bags,r.jdg,r.notes,r.nc]);
+    });
+  }));
+  dlCSV([hdr,...rows],'倉庫管理_現在庫_'+today()+'.csv'); snack('CSVエクスポートしました');
+}
+function expLogCSV(){
+  const hdr=['出庫日時','倉庫','番地','品名','製造番号','ロット','袋数','判定','備考','不適合番号'];
+  dlCSV([hdr,...db.log.map(r=>[fmtDT(r.at),r.wh,r.loc,r.prod,r.lot,r.lotPfx||lotPfx(r.lot||''),r.bags,r.jdg,r.notes,r.nc])],'倉庫管理_出庫履歴_'+today()+'.csv'); snack('出庫履歴CSVエクスポートしました');
+}
+function expJSON(){ dlBlob(JSON.stringify(db,null,2),'application/json','倉庫管理_'+today()+'.json'); snack('バックアップ保存しました'); }
+function impJSON(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+    r.onload=ev=>{ try{ const d=JSON.parse(ev.target.result); if(!d.stock) throw new Error('形式エラー');
+      db=d; if(!db.log)db.log=[]; if(!db.jdgTable||Array.isArray(db.jdgTable))db.jdgTable={};
+      saveDB(); setMode(curMode); snack('インポートしました');
+    } catch(err){ alert('インポート失敗: '+err.message); } }; r.readAsText(f); }; inp.click();
+}
+function dlCSV(rows,fname){ dlBlob('﻿'+rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv',fname); }
+function dlBlob(content,mime,fname){ const b=new Blob([content],{type:mime+';charset=utf-8'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=fname; a.click(); URL.revokeObjectURL(u); }
+function printCurrent(){
+  const rows=db.stock[key(curWH,curLoc)]||[];
+  openPrint(`<h2>${curWH} / ${curLoc}</h2><p>出力日: ${fmtDT(new Date().toISOString())}</p>
+    <table><thead><tr><th>#</th><th>品名</th><th>製造番号</th><th>ロット</th><th>袋数</th><th>判定</th><th>備考</th><th>不適合番号</th></tr></thead><tbody>
+    ${rows.filter(r=>r.lot||r.prod).map((r,i)=>`<tr><td>${i+1}</td><td>${r.prod||''}</td><td>${r.lot||''}</td><td>${r.lotPfx||lotPfx(r.lot||'')}</td><td>${r.bags||''}</td><td>${r.jdg||''}</td><td>${r.notes||''}</td><td>${r.nc||''}</td></tr>`).join('')}
+    </tbody></table>`);
+}
+function printAll(){
+  let html='<h2>倉庫管理 全在庫一覧</h2><p>出力日: '+fmtDT(new Date().toISOString())+'</p>';
+  Object.keys(WH).forEach(wh=>{ const hS=WH[wh].some(l=>(db.stock[key(wh,l)]||[]).some(r=>r.lot||r.prod)); if(!hS) return;
+    html+=`<h3>${wh}</h3>`; WH[wh].forEach(loc=>{ const rows=(db.stock[key(wh,loc)]||[]).filter(r=>r.lot||r.prod); if(!rows.length) return;
+      html+=`<h4>${loc}（${rows.length}P）</h4><table><thead><tr><th>#</th><th>品名</th><th>製造番号</th><th>ロット</th><th>袋数</th><th>判定</th><th>備考</th><th>不適合番号</th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.prod||''}</td><td>${r.lot||''}</td><td>${r.lotPfx||lotPfx(r.lot||'')}</td><td>${r.bags||''}</td><td>${r.jdg||''}</td><td>${r.notes||''}</td><td>${r.nc||''}</td></tr>`).join('')}
+      </tbody></table>`; }); });
+  openPrint(html);
+}
+function openPrint(body){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>倉庫管理</title>
+    <style>body{font-family:'Meiryo',sans-serif;font-size:12px;padding:10px}h2{font-size:16px;margin:0 0 4px}
+    h3{font-size:14px;margin:12px 0 4px;color:#1A237E}h4{font-size:13px;margin:8px 0 3px}
+    table{border-collapse:collapse;width:100%;margin-bottom:8px}th,td{border:1px solid #ccc;padding:3px 6px;font-size:11px}
+    th{background:#283593;color:#fff}tr:nth-child(even){background:#f5f5f5}</style></head><body>${body}</body></html>`);
+  w.document.close(); w.print();
+}
+
+// ── Init ─────────────────────────────────────────────────────
+initStore();
+loadDB();
+setMode('stock');
+
+// ── PWA: Service Worker 登録 ──────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW:',e));
+}
+</script>
+</body>
+</html>
