@@ -1,4 +1,4 @@
-const CACHE = 'wh-cache-v1';
+const CACHE = 'wh-cache-v2';
 
 // インストール時：アプリをキャッシュ
 self.addEventListener('install', e => {

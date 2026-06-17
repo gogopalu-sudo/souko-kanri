@@ -134,6 +134,23 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .std-loc{font-size:11px;color:#616161;white-space:nowrap;line-height:1.5}
 .std-loc b{display:block;color:#212121;font-size:12px}
 .sum-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:700}
+.sbar-toggle{display:flex;background:rgba(255,255,255,.15);border-radius:12px;overflow:hidden;flex-shrink:0}
+.sbar-tv{padding:4px 10px;font-size:12px;font-weight:700;color:rgba(255,255,255,.7);cursor:pointer;border:none;background:transparent;font-family:inherit}
+.sbar-tv.on{background:rgba(255,255,255,.35);color:#fff}
+
+/* ── Aggregation tree ── */
+.agg-prod{display:flex;align-items:center;gap:8px;padding:11px 12px;background:#E8EAF6;border-bottom:1.5px solid #C5CAE9;cursor:pointer;user-select:none}
+.agg-prod:active{background:#C5CAE9}
+.agg-chev{font-size:11px;color:#3F51B5;width:14px;flex-shrink:0;font-style:normal}
+.agg-pname{font-size:15px;font-weight:700;flex:1;color:#1A237E}
+.agg-ptot{font-size:12px;font-weight:700;color:#3F51B5;white-space:nowrap}
+.agg-jdg{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 32px;background:#F3F4FE;border-bottom:1px solid #E8EAF6;cursor:pointer;user-select:none}
+.agg-jdg:active{background:#E8EAF6}
+.agg-jtot{font-size:12px;color:#37474F;flex:1}
+.agg-entry{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 52px;background:#fff;border-bottom:1px solid #F0F0F0}
+.agg-sn{font-family:monospace;font-size:13px;font-weight:700;color:#37474F;min-width:68px;flex-shrink:0}
+.agg-bags{font-size:13px;font-weight:700;color:#212121;flex:1}
+.agg-loc{font-size:11px;color:#757575;text-align:right;white-space:nowrap}
 
 /* ── Bottom bar ── */
 #btm{background:#F5F5F5;border-top:1px solid #E0E0E0;padding:7px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0}
@@ -228,6 +245,9 @@ let curJdgProd = PRODS[0];
 let curJdgLot  = null;
 let expandedProds = new Set();
 let expandedLots  = new Set();
+let sumView = 'list';
+let expandedAggProds = new Set();
+let expandedAggJdgs  = new Set();
 
 // ── DB ───────────────────────────────────────────────────────
 // db.stock[wh::loc]  = [{id,prod,lot,lotPfx,bags,jdg,notes,nc}]
@@ -455,8 +475,13 @@ function renderSumBar(){
   Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>(db.stock[key(wh,loc)]||[]).forEach(r=>{tb+=(r.bags||0);tp++;})));
   document.getElementById('sub-bar').innerHTML=`<div class="sum-bar">
     <span>総在庫: <b>${tb}袋</b> / <b>${tp}P</b></span>
+    <div class="sbar-toggle">
+      <button class="sbar-tv ${sumView==='list'?'on':''}" onclick="setSumView('list')">一覧</button>
+      <button class="sbar-tv ${sumView==='agg'?'on':''}" onclick="setSumView('agg')">集計</button>
+    </div>
   </div>`;
 }
+function setSumView(v){ sumView=v; expandedAggProds.clear(); expandedAggJdgs.clear(); renderSummary(); }
 function renderJdgInfoBar(){
   const lots=Object.keys((db.jdgTable[curJdgProd])||{});
   const cnt=lots.reduce((s,l)=>s+((db.jdgTable[curJdgProd][l])||[]).length,0);
@@ -726,9 +751,61 @@ function buildSummaryData(){
   }));
   return data;
 }
+function buildAggData(){
+  const data={};
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
+    (db.stock[key(wh,loc)]||[]).forEach(r=>{
+      if(!r.prod&&!r.lot) return;
+      const prod=r.prod||'（品名なし）', jdg=r.jdg||'（判定なし）';
+      if(!data[prod]) data[prod]={bags:0,pallets:0,jdgs:{}};
+      data[prod].bags+=(r.bags||0); data[prod].pallets++;
+      if(!data[prod].jdgs[jdg]) data[prod].jdgs[jdg]={bags:0,pallets:0,entries:[]};
+      data[prod].jdgs[jdg].bags+=(r.bags||0); data[prod].jdgs[jdg].pallets++;
+      data[prod].jdgs[jdg].entries.push({sn:r.lot||'', bags:r.bags||0, wh, loc});
+    });
+  }));
+  return data;
+}
+function renderAggView(sc){
+  const data=buildAggData(), prods=Object.keys(data);
+  if(!prods.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
+  prods.sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
+  const JORDER=['O','N','△','300H','中身SA N','X','（判定なし）'];
+  let html='';
+  prods.forEach(prod=>{
+    const pd=data[prod], open=expandedAggProds.has(prod), ep=prod.replace(/'/g,"\\'");
+    html+=`<div class="agg-prod" onclick="toggleAggProd('${ep}')">
+      <i class="agg-chev">${open?'▼':'▶'}</i>
+      <span class="agg-pname">${prod}</span>
+      <span class="agg-ptot">${pd.bags}袋 / ${pd.pallets}P</span></div>`;
+    if(open){
+      const jdgs=Object.keys(pd.jdgs).sort((a,b)=>(JORDER.indexOf(a)<0?99:JORDER.indexOf(a))-(JORDER.indexOf(b)<0?99:JORDER.indexOf(b)));
+      jdgs.forEach(jdg=>{
+        const jd=pd.jdgs[jdg], jk=(prod+'::'+jdg).replace(/'/g,"\\'"), jo=expandedAggJdgs.has(prod+'::'+jdg);
+        const c=JCOL[jdg]||{bg:'#EEE',fg:'#616161'};
+        const badge=jdg!=='（判定なし）'?`<span class="sum-badge" style="background:${c.bg};color:${c.fg}">${jdg}</span>`:`<span style="color:#9E9E9E;font-size:12px">未判定</span>`;
+        html+=`<div class="agg-jdg" onclick="toggleAggJdg('${jk}')">
+          <i class="agg-chev">${jo?'▼':'▶'}</i>${badge}
+          <span class="agg-jtot">${jd.bags}袋 / ${jd.pallets}P</span></div>`;
+        if(jo){
+          jd.entries.sort((a,b)=>(a.sn||'').localeCompare(b.sn||'')).forEach(e=>{
+            html+=`<div class="agg-entry">
+              <span class="agg-sn">${e.sn||'—'}</span>
+              <span class="agg-bags">${e.bags}袋</span>
+              <span class="agg-loc"><b>${e.loc}</b> <span style="color:#BDBDBD">${e.wh}</span></span></div>`;
+          });
+        }
+      });
+    }
+  });
+  sc.innerHTML=html;
+}
+function toggleAggProd(p){ expandedAggProds.has(p)?expandedAggProds.delete(p):expandedAggProds.add(p); renderSummary(); }
+function toggleAggJdg(k){ expandedAggJdgs.has(k)?expandedAggJdgs.delete(k):expandedAggJdgs.add(k); renderSummary(); }
 function renderSummary(){
   renderSumBar();
   const sc=document.getElementById('sum-content'); if(!sc) return;
+  if(sumView==='agg'){ renderAggView(sc); return; }
   const rows=[];
   Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
     (db.stock[key(wh,loc)]||[]).forEach(r=>{
