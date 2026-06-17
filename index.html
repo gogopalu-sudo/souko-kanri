@@ -117,6 +117,12 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .no-lot-msg{padding:40px 20px;text-align:center;color:#9E9E9E;font-size:14px}
 .no-lot-msg b{display:block;font-size:18px;margin-bottom:8px;color:#388E3C}
 
+/* ── Summary filter bar ── */
+#sum-filter{position:sticky;top:0;z-index:10;background:#F0F1FA;border-bottom:1px solid #C5CAE9;display:flex;gap:6px;padding:8px 10px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+#sum-filter::-webkit-scrollbar{display:none}
+.sfbtn{padding:5px 14px;border-radius:14px;border:1.5px solid #9FA8DA;background:#fff;color:#3F51B5;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.sfbtn.on{background:#1A237E;color:#fff;border-color:#1A237E}
+
 /* ── Summary table ── */
 #sum-content{min-height:100%;overflow-x:auto}
 .sum-tbl{border-collapse:collapse;width:100%;min-width:420px}
@@ -246,6 +252,7 @@ let curJdgLot  = null;
 let expandedProds = new Set();
 let expandedLots  = new Set();
 let sumView = 'list';
+let sumProdFilter = '';
 let expandedAggProds = new Set();
 let expandedAggJdgs  = new Set();
 
@@ -309,6 +316,7 @@ function pad(n){ return String(n).padStart(2,'0'); }
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmtDT(iso){ if(!iso)return ''; const d=new Date(iso); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function lotPfx(lot){ return lot ? String(lot).trim().slice(0,3) : ''; }
+function ton(bags){ return (bags/50).toFixed(2)+'t'; }
 
 // ── Judgment lookup ──────────────────────────────────────────
 // Priority: exact serial → lot-level default (sn=3桁) → prefix match
@@ -404,7 +412,7 @@ function renderHomeDate(){
   const d=new Date();
   const w=['日','月','火','水','木','金','土'];
   document.getElementById('home-date').textContent=
-    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w[d.getDay()]}）`;
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w[d.getDay()]}）${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ── Mode switch ───────────────────────────────────────────────
@@ -432,7 +440,7 @@ function setMode(m){
     renderStockTable();
   } else if(m==='summary'){
     renderSumBar();
-    setTblWrap('<div id="sum-content"></div>');
+    setTblWrap('<div id="sum-filter"></div><div id="sum-content"></div>');
     renderSummary();
   } else {
     S('jdg-prod-bar'); S('jdg-lot-bar');
@@ -465,16 +473,15 @@ function renderInfoBar(){
   const bags=rows.reduce((s,r)=>s+(r.bags||0),0);
   document.getElementById('sub-bar').innerHTML=`<div class="info-bar">
     <span class="ib">番地: <b>${curLoc}</b></span>
-    <span class="ib">パレット: <b>${rows.length}</b></span>
     <span class="ib">袋数: <b>${bags}</b></span>
     <span class="ib">トン: <b>${(bags*0.02).toFixed(2)}</b></span>
   </div>`;
 }
 function renderSumBar(){
-  let tb=0,tp=0;
-  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>(db.stock[key(wh,loc)]||[]).forEach(r=>{tb+=(r.bags||0);tp++;})));
+  let tb=0;
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>(db.stock[key(wh,loc)]||[]).forEach(r=>{tb+=(r.bags||0);})));
   document.getElementById('sub-bar').innerHTML=`<div class="sum-bar">
-    <span>総在庫: <b>${tb}袋</b> / <b>${tp}P</b></span>
+    <span>総在庫: <b>${tb}袋</b> / <b>${ton(tb)}</b></span>
     <div class="sbar-toggle">
       <button class="sbar-tv ${sumView==='list'?'on':''}" onclick="setSumView('list')">一覧</button>
       <button class="sbar-tv ${sumView==='agg'?'on':''}" onclick="setSumView('agg')">集計</button>
@@ -482,6 +489,12 @@ function renderSumBar(){
   </div>`;
 }
 function setSumView(v){ sumView=v; expandedAggProds.clear(); expandedAggJdgs.clear(); renderSummary(); }
+function setSumFilter(p){ sumProdFilter=p; renderSummary(); }
+function renderSumFilter(allProds){
+  const sf=document.getElementById('sum-filter'); if(!sf) return;
+  sf.innerHTML=`<button class="sfbtn ${sumProdFilter===''?'on':''}" onclick="setSumFilter('')">全て</button>`
+    +allProds.map(p=>`<button class="sfbtn ${sumProdFilter===p?'on':''}" onclick="setSumFilter('${p.replace(/'/g,"\\'")}')">${p}</button>`).join('');
+}
 function renderJdgInfoBar(){
   const lots=Object.keys((db.jdgTable[curJdgProd])||{});
   const cnt=lots.reduce((s,l)=>s+((db.jdgTable[curJdgProd][l])||[]).length,0);
@@ -753,10 +766,10 @@ function buildSummaryData(){
     (db.stock[key(wh,loc)]||[]).forEach(r=>{
       if(!r.prod&&!r.lot) return;
       const prod=r.prod||'（品名なし）', pfx=r.lotPfx||lotPfx(r.lot)||'—', jdg=r.jdg||'—';
-      if(!data[prod]) data[prod]={bags:0,pallets:0,lots:{}};
-      data[prod].bags+=(r.bags||0); data[prod].pallets++;
-      if(!data[prod].lots[pfx]) data[prod].lots[pfx]={bags:0,pallets:0,entries:[]};
-      data[prod].lots[pfx].bags+=(r.bags||0); data[prod].lots[pfx].pallets++;
+      if(!data[prod]) data[prod]={bags:0,lots:{}};
+      data[prod].bags+=(r.bags||0);
+      if(!data[prod].lots[pfx]) data[prod].lots[pfx]={bags:0,entries:[]};
+      data[prod].lots[pfx].bags+=(r.bags||0);
       data[prod].lots[pfx].entries.push({sn:r.lot||pfx, jdg, bags:r.bags||0, wh, loc});
     });
   }));
@@ -768,19 +781,23 @@ function buildAggData(){
     (db.stock[key(wh,loc)]||[]).forEach(r=>{
       if(!r.prod&&!r.lot) return;
       const prod=r.prod||'（品名なし）', jdg=r.jdg||'（判定なし）';
-      if(!data[prod]) data[prod]={bags:0,pallets:0,jdgs:{}};
-      data[prod].bags+=(r.bags||0); data[prod].pallets++;
-      if(!data[prod].jdgs[jdg]) data[prod].jdgs[jdg]={bags:0,pallets:0,entries:[]};
-      data[prod].jdgs[jdg].bags+=(r.bags||0); data[prod].jdgs[jdg].pallets++;
+      if(!data[prod]) data[prod]={bags:0,jdgs:{}};
+      data[prod].bags+=(r.bags||0);
+      if(!data[prod].jdgs[jdg]) data[prod].jdgs[jdg]={bags:0,entries:[]};
+      data[prod].jdgs[jdg].bags+=(r.bags||0);
       data[prod].jdgs[jdg].entries.push({sn:r.lot||'', bags:r.bags||0, wh, loc});
     });
   }));
   return data;
 }
 function renderAggView(sc){
-  const data=buildAggData(), prods=Object.keys(data);
-  if(!prods.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
-  prods.sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
+  const data=buildAggData(), allProds=Object.keys(data).sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
+  renderSumFilter(allProds);
+  if(!allProds.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
+  if(expandedAggProds.size===0){
+    allProds.forEach(p=>expandedAggProds.add(p));
+  }
+  const prods=sumProdFilter?allProds.filter(p=>p===sumProdFilter):allProds;
   const JORDER=['O','N','△','300H','中身SA N','X','（判定なし）'];
   let html='';
   prods.forEach(prod=>{
@@ -788,7 +805,7 @@ function renderAggView(sc){
     html+=`<div class="agg-prod" onclick="toggleAggProd('${ep}')">
       <i class="agg-chev">${open?'▼':'▶'}</i>
       <span class="agg-pname">${prod}</span>
-      <span class="agg-ptot">${pd.bags}袋 / ${pd.pallets}P</span></div>`;
+      <span class="agg-ptot">${pd.bags}袋 / ${ton(pd.bags)}</span></div>`;
     if(open){
       const jdgs=Object.keys(pd.jdgs).sort((a,b)=>(JORDER.indexOf(a)<0?99:JORDER.indexOf(a))-(JORDER.indexOf(b)<0?99:JORDER.indexOf(b)));
       jdgs.forEach(jdg=>{
@@ -797,7 +814,7 @@ function renderAggView(sc){
         const badge=jdg!=='（判定なし）'?`<span class="sum-badge" style="background:${c.bg};color:${c.fg}">${jdg}</span>`:`<span style="color:#9E9E9E;font-size:12px">未判定</span>`;
         html+=`<div class="agg-jdg" onclick="toggleAggJdg('${jk}')">
           <i class="agg-chev">${jo?'▼':'▶'}</i>${badge}
-          <span class="agg-jtot">${jd.bags}袋 / ${jd.pallets}P</span></div>`;
+          <span class="agg-jtot">${jd.bags}袋 / ${ton(jd.bags)}</span></div>`;
         if(jo){
           jd.entries.sort((a,b)=>(a.sn||'').localeCompare(b.sn||'')).forEach(e=>{
             html+=`<div class="agg-entry">
@@ -826,7 +843,10 @@ function renderSummary(){
     });
   }));
   if(!rows.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
-  rows.sort((a,b)=>{
+  const allProds=[...new Set(rows.map(r=>r.prod))].sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
+  renderSumFilter(allProds);
+  const filtered=sumProdFilter?rows.filter(r=>r.prod===sumProdFilter):rows;
+  filtered.sort((a,b)=>{
     const po=(PRODS.indexOf(a.prod)<0?99:PRODS.indexOf(a.prod))-(PRODS.indexOf(b.prod)<0?99:PRODS.indexOf(b.prod));
     if(po) return po;
     if(a.pfx<b.pfx) return -1; if(a.pfx>b.pfx) return 1;
@@ -838,11 +858,10 @@ function renderSummary(){
     <th style="width:52px;text-align:right">袋数</th><th>場所</th>
   </tr></thead><tbody>`;
   let lastProd='';
-  rows.forEach(r=>{
+  filtered.forEach(r=>{
     if(r.prod!==lastProd){
-      const tb=rows.filter(x=>x.prod===r.prod).reduce((s,x)=>s+(x.bags||0),0);
-      const tp=rows.filter(x=>x.prod===r.prod).length;
-      html+=`<tr class="sum-grp"><td colspan="6">${r.prod}　${tb}袋 / ${tp}P</td></tr>`;
+      const tb=filtered.filter(x=>x.prod===r.prod).reduce((s,x)=>s+(x.bags||0),0);
+      html+=`<tr class="sum-grp"><td colspan="6">${r.prod}　${tb}袋 / ${ton(tb)}</td></tr>`;
       lastProd=r.prod;
     }
     const c=JCOL[r.jdg]||{bg:'#EEE',fg:'#616161'};
