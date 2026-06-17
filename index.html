@@ -565,7 +565,7 @@ function tryAutoFill(tr, quiet=false){
     if(!quiet){ jCell.classList.remove('af'); void jCell.offsetWidth; jCell.classList.add('af'); }
   }
   if(m.nc!==undefined){ const ncEl=tr.querySelector('.fc'); ncEl.value=m.nc; }
-  { const nEl=tr.querySelector('.fn'); if(nEl) nEl.value=m.notes||''; }
+  { const nEl=tr.querySelector('.fn'); if(nEl&&m.notes) nEl.value=m.notes; }
   if(!quiet) autoSave();
 }
 function syncStockNotes(inp){
@@ -576,6 +576,17 @@ function syncStockNotes(inp){
     const entries=((db.jdgTable[prod]||{})[pfx])||[];
     const entry=entries.find(e=>e.sn===sn)||entries.find(e=>e.sn===pfx);
     if(entry){ entry.notes=inp.value; }
+  }
+  autoSave();
+}
+function syncJdgNotes(inp){
+  const tr=inp.closest('tr');
+  const sn=tr.querySelector('.jsn').value.trim();
+  const newNotes=inp.value;
+  if(sn){
+    Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
+      (db.stock[key(wh,loc)]||[]).forEach(r=>{ if(r.lot===sn) r.notes=newNotes; });
+    }));
   }
   autoSave();
 }
@@ -688,7 +699,7 @@ function makeJdgRow(data){
     <td style="width:80px"><select class="cs jj" onchange="autoSave()">
       <option value="">—</option>${jOpts}</select></td>
     <td><input class="ci jnc" type="text" value="${esc(data.nc||'')}" onblur="autoSave()" placeholder="不適合番号"></td>
-    <td><input class="ci jn" type="text" value="${esc(data.notes||'')}" onblur="autoSave()" placeholder="備考テンプレート"></td>`;
+    <td><input class="ci jn" type="text" value="${esc(data.notes||'')}" onblur="syncJdgNotes(this)" placeholder="備考"></td>`;
   return tr;
 }
 function addJdgRowSingle(){
