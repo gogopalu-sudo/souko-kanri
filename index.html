@@ -117,21 +117,23 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .no-lot-msg{padding:40px 20px;text-align:center;color:#9E9E9E;font-size:14px}
 .no-lot-msg b{display:block;font-size:18px;margin-bottom:8px;color:#388E3C}
 
-/* ── Summary tree ── */
-#sum-content{min-height:100%}
-.sp-prod{display:flex;align-items:center;gap:8px;padding:11px 12px;background:#E8EAF6;border-bottom:1.5px solid #C5CAE9;cursor:pointer;user-select:none}
-.sp-prod:active{background:#C5CAE9}
-.sp-chev{font-size:11px;color:#3F51B5;width:14px;flex-shrink:0;font-style:normal}
-.sp-name{font-size:15px;font-weight:700;flex:1;color:#1A237E}
-.sp-tot{font-size:13px;font-weight:700;color:#3F51B5;white-space:nowrap}
-.sp-lot{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 30px;background:#F3F4FE;border-bottom:1px solid #E8EAF6;cursor:pointer;user-select:none}
-.sp-lot:active{background:#E8EAF6}
-.sp-lname{font-size:13px;font-weight:700;flex:1;color:#283593}
-.sp-ltot{font-size:12px;color:#3F51B5;white-space:nowrap}
-.sp-jdg-row{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 48px;background:#fff;border-bottom:1px solid #F0F0F0}
-.sp-badge{padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700;flex-shrink:0}
-.sp-bags{font-size:13px;font-weight:700;flex:1}
-.sp-locs{font-size:10px;color:#9E9E9E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+/* ── Summary table ── */
+#sum-content{min-height:100%;overflow-x:auto}
+.sum-tbl{border-collapse:collapse;width:100%;min-width:420px}
+.sum-tbl thead{position:sticky;top:0;z-index:20}
+.sum-tbl thead th{background:#1A237E;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:left;white-space:nowrap;border-right:1px solid rgba(255,255,255,.15)}
+.sum-grp td{background:#E8EAF6;color:#1A237E;font-weight:700;font-size:13px;padding:6px 10px;border-bottom:2px solid #9FA8DA;border-top:3px solid #9FA8DA}
+.sum-row td{padding:7px 8px;font-size:13px;border-bottom:1px solid #EEEEEE;vertical-align:middle}
+.sum-row:nth-child(even) td{background:#F8F9FF}
+.sum-row:hover td{background:#FFF9C4}
+.std-prod{color:#1A237E;font-weight:700;font-size:12px;white-space:nowrap}
+.std-pfx{font-family:monospace;color:#5C6BC0;font-size:13px}
+.std-sn{font-family:monospace;font-weight:700;font-size:13px}
+.std-jdg{text-align:center}
+.std-bags{text-align:right;font-weight:700;padding-right:10px!important}
+.std-loc{font-size:11px;color:#616161;white-space:nowrap;line-height:1.5}
+.std-loc b{display:block;color:#212121;font-size:12px}
+.sum-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:700}
 
 /* ── Bottom bar ── */
 #btm{background:#F5F5F5;border-top:1px solid #E0E0E0;padding:7px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0}
@@ -139,6 +141,21 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .btn-green:active{opacity:.85}
 .btn-blue{background:#1565C0;color:#fff;border:none;border-radius:18px;padding:8px 14px;font-size:14px;cursor:pointer;font-family:inherit;margin-left:auto}
 .btn-blue:active{opacity:.85}
+
+/* ── Home screen ── */
+.home-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;background:linear-gradient(160deg,#0A1550,#1A237E 55%,#283593);color:#fff;padding:32px 24px;gap:0}
+.home-title{font-size:26px;font-weight:900;letter-spacing:6px;margin-bottom:6px;text-align:center}
+.home-sub{font-size:14px;font-weight:500;opacity:.6;margin-bottom:56px;letter-spacing:3px;text-align:center}
+.home-btns{display:flex;flex-direction:column;gap:16px;width:100%;max-width:340px}
+.home-btn{display:flex;align-items:center;gap:18px;padding:20px 24px;background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.22);border-radius:18px;color:#fff;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;-webkit-tap-highlight-color:transparent}
+.home-btn:active{background:rgba(255,255,255,.22)}
+.home-btn-icon{font-size:26px;flex-shrink:0}
+.home-btn-label{flex:1}
+.home-btn-arrow{opacity:.4;font-size:18px}
+.home-info{margin-top:48px;font-size:13px;opacity:.5;letter-spacing:1px;display:flex;gap:6px;align-items:center}
+.home-info-sep{opacity:.5}
+.mode-home{padding:8px 12px;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center}
+.mode-home:active{color:#fff}
 
 /* ── Snack ── */
 #snack{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:9px 18px;border-radius:6px;font-size:13px;z-index:999;transition:transform .3s;white-space:nowrap;pointer-events:none}
@@ -162,9 +179,10 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 <body>
 <div id="snack"></div>
 <div id="mode-bar">
-  <div class="mode-tab on" id="mt-stock"   onclick="setMode('stock')">📦 在庫管理</div>
-  <div class="mode-tab"    id="mt-summary" onclick="setMode('summary')">📊 在庫一覧</div>
-  <div class="mode-tab"    id="mt-jdg"     onclick="setMode('jdg')">📋 判定表</div>
+  <div class="mode-home" onclick="setMode('home')" title="ホーム">⌂</div>
+  <div class="mode-tab" id="mt-stock"   onclick="setMode('stock')">📦 在庫管理</div>
+  <div class="mode-tab" id="mt-summary" onclick="setMode('summary')">📊 在庫一覧</div>
+  <div class="mode-tab" id="mt-jdg"     onclick="setMode('jdg')">📋 判定表</div>
 </div>
 <!-- stock bars -->
 <div id="wh-bar"></div>
@@ -203,7 +221,7 @@ const JCOL  = {
 };
 
 // ── State ────────────────────────────────────────────────────
-let curMode    = 'stock';
+let curMode    = 'home';
 let curWH      = '1号倉庫';
 let curLoc     = WH['1号倉庫'][0];
 let curJdgProd = PRODS[0];
@@ -333,14 +351,60 @@ function autoSave(){
   if(curMode==='jdg') renderJdgProdTabs();
 }
 
+// ── Home screen ───────────────────────────────────────────────
+function renderHomeHTML(){
+  return `<div class="home-screen">
+    <div class="home-title">中央シリカ</div>
+    <div class="home-sub">倉庫帳面</div>
+    <div class="home-btns">
+      <button class="home-btn" onclick="setMode('stock')">
+        <span class="home-btn-icon">📦</span>
+        <span class="home-btn-label">在庫管理</span>
+        <span class="home-btn-arrow">›</span>
+      </button>
+      <button class="home-btn" onclick="setMode('summary')">
+        <span class="home-btn-icon">📊</span>
+        <span class="home-btn-label">在庫一覧</span>
+        <span class="home-btn-arrow">›</span>
+      </button>
+      <button class="home-btn" onclick="setMode('jdg')">
+        <span class="home-btn-icon">📋</span>
+        <span class="home-btn-label">判定表</span>
+        <span class="home-btn-arrow">›</span>
+      </button>
+    </div>
+    <div class="home-info">
+      <span>ver 1.0</span>
+      <span class="home-info-sep">｜</span>
+      <span id="home-date"></span>
+    </div>
+  </div>`;
+}
+function renderHomeDate(){
+  const d=new Date();
+  const w=['日','月','火','水','木','金','土'];
+  document.getElementById('home-date').textContent=
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w[d.getDay()]}）`;
+}
+
 // ── Mode switch ───────────────────────────────────────────────
 function setMode(m){
-  autoSave();
+  if(m!=='home') autoSave();
   curMode=m;
   ['stock','summary','jdg'].forEach(x=>document.getElementById('mt-'+x).classList.toggle('on',x===m));
+  const mb=document.getElementById('mode-bar');
   const S=id=>document.getElementById(id).style.display='';
   const H=id=>document.getElementById(id).style.display='none';
   H('wh-bar'); H('loc-bar'); H('jdg-prod-bar'); H('jdg-lot-bar');
+  if(m==='home'){
+    mb.style.display='none';
+    document.getElementById('sub-bar').innerHTML='';
+    document.getElementById('btm').innerHTML='';
+    setTblWrap(renderHomeHTML());
+    renderHomeDate();
+    return;
+  }
+  mb.style.display='';
   if(m==='stock'){
     S('wh-bar'); S('loc-bar');
     renderWhTabs(); renderLocTabs(); renderInfoBar();
@@ -391,8 +455,6 @@ function renderSumBar(){
   Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>(db.stock[key(wh,loc)]||[]).forEach(r=>{tb+=(r.bags||0);tp++;})));
   document.getElementById('sub-bar').innerHTML=`<div class="sum-bar">
     <span>総在庫: <b>${tb}袋</b> / <b>${tp}P</b></span>
-    <button class="sbar-btn" onclick="expandAll()">全展開</button>
-    <button class="sbar-btn" onclick="collapseAll()">全折りたたみ</button>
   </div>`;
 }
 function renderJdgInfoBar(){
@@ -424,7 +486,12 @@ function renderStockTable(){
     const em=document.createElement('tr'); em.className='empty-msg';
     em.innerHTML='<td colspan="8">まだ記録がありません。「＋ 入庫を追加」で追加。</td>';
     tbody.appendChild(em);
-  } else { rows.forEach(r=>tbody.appendChild(makeStockRow(r))); }
+  } else {
+    rows.forEach(r=>tbody.appendChild(makeStockRow(r)));
+    // 判定表から全行を一括反映（後追い登録に対応）
+    document.querySelectorAll('#tbody tr.dr').forEach(tr=>tryAutoFill(tr,true));
+    saveDB();
+  }
   const at=document.createElement('tr'); at.className='add-tr';
   at.innerHTML='<td colspan="8"><button class="add-tr-btn" onclick="addStockRow()">＋ 行を追加（入庫）</button></td>';
   tbody.appendChild(at);
@@ -444,7 +511,7 @@ function makeStockRow(data){
     <td class="td-bags"><input class="ci fb" type="number" value="${data.bags||50}" min="1" onblur="autoSave()"></td>
     <td class="td-jdg" style="text-align:center;padding:4px">
       <div class="jdg-cell" data-jdg="${esc(data.jdg)}">${jBadgeHTML(data.jdg)}</div></td>
-    <td class="td-notes"><input class="ci fn" type="text" value="${esc(data.notes)}" onblur="autoSave()" placeholder="備考"></td>
+    <td class="td-notes"><input class="ci fn" type="text" value="${esc(data.notes)}" onblur="syncStockNotes(this)" placeholder="備考"></td>
     <td class="td-nc"><input class="ci fc" type="text" readonly value="${esc(data.nc)}"
       placeholder="(判定表から自動)" style="background:#F3F4FE;color:#37474F;cursor:default"></td>
     <td class="td-lpfx"><span id="lh_${data.id}">${pfx||''}</span></td>`;
@@ -461,30 +528,41 @@ function onLotInput(inp){
 }
 function onLotBlur(inp){ clearTimeout(_lt); tryAutoFill(inp.closest('tr')); autoSave(); }
 function onProdChange(sel){ const tr=sel.closest('tr'); if(tr.querySelector('.fl').value.trim()) tryAutoFill(tr); }
-function tryAutoFill(tr){
+// quiet=true のとき：アニメなし・autoSaveなし（一括更新用）
+function tryAutoFill(tr, quiet=false){
   const prod=tr.querySelector('.fp').value, sn=tr.querySelector('.fl').value.trim();
   if(!sn) return;
   const m=lookupJdg(prod,sn); if(!m) return;
-  // 判定バッジ更新（読み取り専用）
   const jCell=tr.querySelector('.jdg-cell');
   if(jCell){
     jCell.dataset.jdg=m.jdg;
     jCell.innerHTML=jBadgeHTML(m.jdg);
-    jCell.classList.remove('af'); void jCell.offsetWidth; jCell.classList.add('af');
+    if(!quiet){ jCell.classList.remove('af'); void jCell.offsetWidth; jCell.classList.add('af'); }
   }
-  // 不適合番号（readonly・自動入力のみ）
   if(m.nc!==undefined){ const ncEl=tr.querySelector('.fc'); ncEl.value=m.nc; }
-  // 備考テンプレート（空の場合のみ）
-  if(m.notes){ const nEl=tr.querySelector('.fn'); if(!nEl.value) nEl.value=m.notes; }
+  { const nEl=tr.querySelector('.fn'); if(nEl) nEl.value=m.notes||''; }
+  if(!quiet) autoSave();
+}
+function syncStockNotes(inp){
+  const tr=inp.closest('tr');
+  const prod=tr.querySelector('.fp').value, sn=tr.querySelector('.fl').value.trim();
+  if(sn&&prod){
+    const pfx=lotPfx(sn);
+    const entries=((db.jdgTable[prod]||{})[pfx])||[];
+    const entry=entries.find(e=>e.sn===sn)||entries.find(e=>e.sn===pfx);
+    if(entry){ entry.notes=inp.value; }
+  }
   autoSave();
 }
 function addStockRow(){
   document.querySelector('#tbody .empty-msg')?.remove();
-  const lastProd=document.querySelector('#tbody tr.dr:last-of-type .fp')?.value||'';
+  const rows=document.querySelectorAll('#tbody tr.dr');
+  const lastProd=rows.length ? rows[rows.length-1].querySelector('.fp')?.value||'' : '';
   const r={id:uid(),prod:lastProd,lot:'',lotPfx:'',bags:50,jdg:'',notes:'',nc:''};
   document.getElementById('tbody').insertBefore(makeStockRow(r), document.querySelector('#tbody .add-tr'));
   autoSave();
-  document.querySelector('#tbody tr.dr:last-of-type .fl')?.focus();
+  const newRows=document.querySelectorAll('#tbody tr.dr');
+  newRows[newRows.length-1]?.querySelector('.fl')?.focus();
 }
 function delStockRow(id){
   const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
@@ -568,7 +646,10 @@ function renderJdgTableContent(){
     tbody.appendChild(em);
   } else { entries.forEach(e=>tbody.appendChild(makeJdgRow(e))); }
   const at=document.createElement('tr'); at.className='add-tr';
-  at.innerHTML='<td colspan="4"><button class="add-tr-btn" onclick="addJdgRow()">＋ 5行を連番追加</button></td>';
+  at.innerHTML=`<td colspan="4" style="padding:0"><div style="display:flex">
+    <button class="add-tr-btn" style="flex:1;border-right:1px solid #A5D6A7" onclick="addJdgRowSingle()">＋ 1行追加（手動）</button>
+    <button class="add-tr-btn" style="flex:1" onclick="addJdgRow()">＋ 5行を連番追加</button>
+  </div></td>`;
   tbody.appendChild(at);
 }
 
@@ -584,6 +665,15 @@ function makeJdgRow(data){
     <td><input class="ci jnc" type="text" value="${esc(data.nc||'')}" onblur="autoSave()" placeholder="不適合番号"></td>
     <td><input class="ci jn" type="text" value="${esc(data.notes||'')}" onblur="autoSave()" placeholder="備考テンプレート"></td>`;
   return tr;
+}
+function addJdgRowSingle(){
+  document.querySelector('#tbody .empty-msg')?.remove();
+  const tbody=document.getElementById('tbody');
+  const addTr=document.querySelector('#tbody .add-tr');
+  tbody.insertBefore(makeJdgRow({id:uid(),sn:'',jdg:'',notes:'',nc:''}),addTr);
+  autoSave();
+  const rows=[...document.querySelectorAll('#tbody tr.jr')];
+  rows[rows.length-1]?.querySelector('.jsn')?.focus();
 }
 function addJdgRow(){
   document.querySelector('#tbody .empty-msg')?.remove();
@@ -629,47 +719,56 @@ function buildSummaryData(){
       const prod=r.prod||'（品名なし）', pfx=r.lotPfx||lotPfx(r.lot)||'—', jdg=r.jdg||'—';
       if(!data[prod]) data[prod]={bags:0,pallets:0,lots:{}};
       data[prod].bags+=(r.bags||0); data[prod].pallets++;
-      if(!data[prod].lots[pfx]) data[prod].lots[pfx]={bags:0,pallets:0,jdgs:{}};
+      if(!data[prod].lots[pfx]) data[prod].lots[pfx]={bags:0,pallets:0,entries:[]};
       data[prod].lots[pfx].bags+=(r.bags||0); data[prod].lots[pfx].pallets++;
-      if(!data[prod].lots[pfx].jdgs[jdg]) data[prod].lots[pfx].jdgs[jdg]={bags:0,pallets:0,locs:[]};
-      data[prod].lots[pfx].jdgs[jdg].bags+=(r.bags||0); data[prod].lots[pfx].jdgs[jdg].pallets++;
-      data[prod].lots[pfx].jdgs[jdg].locs.push(loc);
+      data[prod].lots[pfx].entries.push({sn:r.lot||pfx, jdg, bags:r.bags||0, wh, loc});
     });
   }));
   return data;
 }
 function renderSummary(){
   renderSumBar();
-  const data=buildSummaryData(), prods=Object.keys(data);
   const sc=document.getElementById('sum-content'); if(!sc) return;
-  if(!prods.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
-  prods.sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
-  let html='';
-  prods.forEach(prod=>{
-    const pd=data[prod], open=expandedProds.has(prod), ep=prod.replace(/'/g,"\\'");
-    html+=`<div class="sp-prod" onclick="toggleProd('${ep}')">
-      <i class="sp-chev">${open?'▼':'▶'}</i><span class="sp-name">${prod}</span>
-      <span class="sp-tot">${pd.bags}袋 / ${pd.pallets}P</span></div>`;
-    if(open){
-      Object.keys(pd.lots).sort().forEach(pfx=>{
-        const ld=pd.lots[pfx], lk=(prod+'::'+pfx).replace(/'/g,"\\'"), lo=expandedLots.has(prod+'::'+pfx);
-        html+=`<div class="sp-lot" onclick="toggleLot('${lk}')">
-          <i class="sp-chev">${lo?'▼':'▶'}</i><span class="sp-lname">ロット ${pfx}</span>
-          <span class="sp-ltot">${ld.bags}袋 / ${ld.pallets}P</span></div>`;
-        if(lo){
-          const jdgs=Object.keys(ld.jdgs).sort((a,b)=>(JDGS.indexOf(a)<0?99:JDGS.indexOf(a))-(JDGS.indexOf(b)<0?99:JDGS.indexOf(b)));
-          jdgs.forEach(jdg=>{
-            const jd=ld.jdgs[jdg], c=JCOL[jdg]||{bg:'#EEE',fg:'#616161'};
-            const locs=[...new Set(jd.locs)], locStr=locs.slice(0,4).join(', ')+(locs.length>4?` 他${locs.length-4}箇所`:'');
-            html+=`<div class="sp-jdg-row">
-              <span class="sp-badge" style="background:${c.bg};color:${c.fg}">${jdg}</span>
-              <span class="sp-bags">${jd.bags}袋 (${jd.pallets}P)</span>
-              <span class="sp-locs" title="${locs.join(', ')}">${locStr}</span></div>`;
-          });
-        }
-      });
-    }
+  const rows=[];
+  Object.keys(WH).forEach(wh=>WH[wh].forEach(loc=>{
+    (db.stock[key(wh,loc)]||[]).forEach(r=>{
+      if(!r.prod&&!r.lot) return;
+      rows.push({prod:r.prod||'（品名なし）', pfx:r.lotPfx||lotPfx(r.lot)||'—',
+        sn:r.lot||'', jdg:r.jdg||'', bags:r.bags||0, wh, loc});
+    });
+  }));
+  if(!rows.length){ sc.innerHTML='<div class="empty-msg-d">在庫データがありません</div>'; return; }
+  rows.sort((a,b)=>{
+    const po=(PRODS.indexOf(a.prod)<0?99:PRODS.indexOf(a.prod))-(PRODS.indexOf(b.prod)<0?99:PRODS.indexOf(b.prod));
+    if(po) return po;
+    if(a.pfx<b.pfx) return -1; if(a.pfx>b.pfx) return 1;
+    return (a.sn||'').localeCompare(b.sn||'');
   });
+  let html=`<table class="sum-tbl"><thead><tr>
+    <th style="width:70px">品名</th><th style="width:46px">ロット</th>
+    <th style="width:82px">製造番号</th><th style="width:74px;text-align:center">判定</th>
+    <th style="width:52px;text-align:right">袋数</th><th>場所</th>
+  </tr></thead><tbody>`;
+  let lastProd='';
+  rows.forEach(r=>{
+    if(r.prod!==lastProd){
+      const tb=rows.filter(x=>x.prod===r.prod).reduce((s,x)=>s+(x.bags||0),0);
+      const tp=rows.filter(x=>x.prod===r.prod).length;
+      html+=`<tr class="sum-grp"><td colspan="6">${r.prod}　${tb}袋 / ${tp}P</td></tr>`;
+      lastProd=r.prod;
+    }
+    const c=JCOL[r.jdg]||{bg:'#EEE',fg:'#616161'};
+    const badge=r.jdg?`<span class="sum-badge" style="background:${c.bg};color:${c.fg}">${r.jdg}</span>`:'<span style="color:#BDBDBD">—</span>';
+    html+=`<tr class="sum-row">
+      <td class="std-prod">${r.prod}</td>
+      <td class="std-pfx">${r.pfx}</td>
+      <td class="std-sn">${r.sn||'—'}</td>
+      <td class="std-jdg">${badge}</td>
+      <td class="std-bags">${r.bags}</td>
+      <td class="std-loc"><b>${r.loc}</b><span style="color:#9E9E9E;font-size:10px"> ${r.wh}</span></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
   sc.innerHTML=html;
 }
 function toggleProd(p){ expandedProds.has(p)?expandedProds.delete(p):expandedProds.add(p); renderSummary(); }
@@ -683,7 +782,7 @@ function renderBtm(){
   if(curMode==='stock')
     b.innerHTML=`<button class="btn-green" onclick="addStockRow()">＋ 入庫を追加</button><button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
   else if(curMode==='jdg'&&curJdgLot)
-    b.innerHTML=`<button class="btn-green" onclick="addJdgRow()">＋ 5行を連番追加</button><button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
+    b.innerHTML=`<button class="btn-green" onclick="addJdgRowSingle()">＋ 1行追加</button><button class="btn-green" onclick="addJdgRow()">＋ 5行連番</button><button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
   else
     b.innerHTML=`<button class="btn-blue" onclick="openMenu()">⋮ メニュー</button>`;
 }
@@ -766,7 +865,7 @@ function openPrint(body){
 // ── Init ─────────────────────────────────────────────────────
 initStore();
 loadDB();
-setMode('stock');
+setMode('home');
 
 // ── PWA: Service Worker 登録 ──────────────────────────────
 if('serviceWorker' in navigator){
