@@ -206,6 +206,7 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
   <div class="mode-tab" id="mt-stock"   onclick="setMode('stock')">📦 在庫管理</div>
   <div class="mode-tab" id="mt-summary" onclick="setMode('summary')">📊 在庫一覧</div>
   <div class="mode-tab" id="mt-jdg"     onclick="setMode('jdg')">📋 判定表</div>
+  <div class="mode-tab" id="mt-log"     onclick="setMode('log')">🕐 履歴</div>
 </div>
 <!-- stock bars -->
 <div id="wh-bar"></div>
@@ -299,8 +300,9 @@ function loadDB(){
         try{_store.removeItem('wh_v3');}catch(e){}
       }
     } else { db=JSON.parse(s); }
-    if(!db.stock)    db.stock={};
-    if(!db.log)      db.log=[];
+    if(!db.stock)      db.stock={};
+    if(!db.log)        db.log=[];
+    if(!db.loggedIds)  db.loggedIds=[];
     if(!db.jdgTable||Array.isArray(db.jdgTable)) db.jdgTable={};
   } catch(e){ console.error('loadDB:',e); db={stock:{},log:[],jdgTable:{}}; }
 }
@@ -369,6 +371,15 @@ function collectJdgRows(){
 function autoSave(){
   if(curMode==='stock'&&document.querySelector('#tbody tr.dr')){
     db.stock[key(curWH,curLoc)]=collectStockRows();
+    if(!db.loggedIds) db.loggedIds=[];
+    (db.stock[key(curWH,curLoc)]||[]).forEach(r=>{
+      if(r.lot&&!db.loggedIds.includes(r.id)){
+        db.log.push({type:'in',wh:curWH,loc:curLoc,prod:r.prod,lot:r.lot,
+          lotPfx:r.lotPfx||lotPfx(r.lot),bags:r.bags,jdg:r.jdg,
+          notes:r.notes,nc:r.nc,at:new Date().toISOString()});
+        db.loggedIds.push(r.id);
+      }
+    });
   } else if(curMode==='jdg'&&curJdgLot&&document.querySelector('#tbody tr.jr')){
     if(!db.jdgTable[curJdgProd]) db.jdgTable[curJdgProd]={};
     db.jdgTable[curJdgProd][curJdgLot]=collectJdgRows();
@@ -400,6 +411,11 @@ function renderHomeHTML(){
         <span class="home-btn-label">判定表</span>
         <span class="home-btn-arrow">›</span>
       </button>
+      <button class="home-btn" onclick="setMode('log')">
+        <span class="home-btn-icon">🕐</span>
+        <span class="home-btn-label">入出庫履歴</span>
+        <span class="home-btn-arrow">›</span>
+      </button>
     </div>
     <div class="home-info">
       <span>ver 1.0</span>
@@ -419,7 +435,7 @@ function renderHomeDate(){
 function setMode(m){
   if(m!=='home') autoSave();
   curMode=m;
-  ['stock','summary','jdg'].forEach(x=>document.getElementById('mt-'+x).classList.toggle('on',x===m));
+  ['stock','summary','jdg','log'].forEach(x=>document.getElementById('mt-'+x).classList.toggle('on',x===m));
   const mb=document.getElementById('mode-bar');
   const S=id=>document.getElementById(id).style.display='';
   const H=id=>document.getElementById(id).style.display='none';
@@ -442,6 +458,10 @@ function setMode(m){
     renderSumBar();
     setTblWrap('<div id="sum-filter"></div><div id="sum-content"></div>');
     renderSummary();
+  } else if(m==='log'){
+    document.getElementById('sub-bar').innerHTML='<div class="info-bar" style="background:#37474F"><span style="color:#fff;font-size:13px">📋 入庫・削除 履歴</span></div>';
+    setTblWrap('<div id="log-content"></div>');
+    renderLogView();
   } else {
     S('jdg-prod-bar'); S('jdg-lot-bar');
     renderJdgProdTabs(); renderJdgLotTabs(); renderJdgInfoBar();
@@ -615,11 +635,11 @@ function addStockRow(){
 }
 function delStockRow(id){
   const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
-  const lot=tr.querySelector('.fl').value.trim(), label=lot?`製造番号 ${lot}`:'この行';
-  if(!confirm(`${label} を出庫（削除）しますか？`)) return;
-  db.log.push({wh:curWH,loc:curLoc,prod:tr.querySelector('.fp').value,lot,
+  const lot=tr.querySelector('.fl').value.trim();
+  db.log.push({type:'del',wh:curWH,loc:curLoc,prod:tr.querySelector('.fp').value,lot,
     lotPfx:lotPfx(lot),bags:parseInt(tr.querySelector('.fb').value)||0,
-    jdg:tr.querySelector('.fj').value,notes:tr.querySelector('.fn').value,
+    jdg:tr.querySelector('.jdg-cell')?.dataset.jdg||'',
+    notes:tr.querySelector('.fn').value,
     nc:tr.querySelector('.fc').value,at:new Date().toISOString()});
   tr.remove();
   if(!document.querySelector('#tbody tr.dr')){
@@ -882,6 +902,36 @@ function toggleProd(p){ expandedProds.has(p)?expandedProds.delete(p):expandedPro
 function toggleLot(k){ expandedLots.has(k)?expandedLots.delete(k):expandedLots.add(k); renderSummary(); }
 function expandAll(){ const d=buildSummaryData(); Object.keys(d).forEach(p=>{ expandedProds.add(p); Object.keys(d[p].lots).forEach(l=>expandedLots.add(p+'::'+l)); }); renderSummary(); }
 function collapseAll(){ expandedProds.clear(); expandedLots.clear(); renderSummary(); }
+
+// ── Log view ─────────────────────────────────────────────────
+function renderLogView(){
+  const sc=document.getElementById('log-content'); if(!sc) return;
+  const logs=[...(db.log||[])].reverse();
+  if(!logs.length){ sc.innerHTML='<div class="empty-msg-d">履歴がありません</div>'; return; }
+  let html=`<table class="sum-tbl"><thead><tr>
+    <th style="width:46px;text-align:center">種別</th>
+    <th style="width:110px">日時</th>
+    <th style="width:70px">品名</th>
+    <th style="width:80px">製造番号</th>
+    <th style="width:52px;text-align:right">袋数</th>
+    <th>場所</th>
+  </tr></thead><tbody>`;
+  logs.forEach(r=>{
+    const isDel=r.type==='del';
+    const bg=isDel?'#FFEBEE':'#E8F5E9', fg=isDel?'#C62828':'#2E7D32';
+    const label=isDel?'削除':'入庫';
+    html+=`<tr class="sum-row">
+      <td style="text-align:center"><span class="sum-badge" style="background:${bg};color:${fg}">${label}</span></td>
+      <td style="font-size:11px;color:#555;white-space:nowrap">${fmtDT(r.at)}</td>
+      <td class="std-prod">${r.prod||''}</td>
+      <td class="std-sn">${r.lot||'—'}</td>
+      <td class="std-bags">${r.bags||0}</td>
+      <td class="std-loc"><b>${r.loc||''}</b><span style="color:#9E9E9E;font-size:10px"> ${r.wh||''}</span></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  sc.innerHTML=html;
+}
 
 // ── Bottom bar ────────────────────────────────────────────────
 function renderBtm(){
