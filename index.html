@@ -188,8 +188,8 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .mode-home:active{color:#fff}
 
 /* ── Snack ── */
-#snack{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:9px 18px;border-radius:6px;font-size:13px;z-index:999;transition:transform .3s;white-space:nowrap;pointer-events:none}
-#snack.show{transform:translateX(-50%) translateY(0)}
+#snack{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:9px 18px;border-radius:6px;font-size:13px;z-index:999;transition:transform .3s;white-space:nowrap;pointer-events:none;display:flex;align-items:center;gap:4px}
+#snack.show{transform:translateX(-50%) translateY(0);pointer-events:auto}
 
 /* ── Dialog ── */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end}
@@ -626,7 +626,7 @@ function makeStockRow(data){
     <td class="td-lpfx"><span id="lh_${data.id}">${pfx||''}</span></td>`;
   return tr;
 }
-let _lt;
+let _lt, _undoTimer, _deletedUndo=null;
 function onLotInput(inp){
   const tr=inp.closest('tr'), id=tr.dataset.id, pfx=lotPfx(inp.value);
   const h=document.getElementById('lh_'+id); if(h) h.textContent=pfx||'';
@@ -687,18 +687,45 @@ function addStockRow(){
 function delStockRow(id){
   const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
   const lot=tr.querySelector('.fl').value.trim();
-  db.log.push({type:'del',wh:curWH,loc:curLoc,prod:tr.querySelector('.fp').value,lot,
-    lotPfx:lotPfx(lot),bags:parseInt(tr.querySelector('.fb').value)||0,
+  const prod=tr.querySelector('.fp').value;
+  const label=lot||prod||'行';
+  const rows=db.stock[key(curWH,curLoc)]||[];
+  const idx=rows.findIndex(r=>r.id===id);
+  const rowData={id,prod,lot,lotPfx:lotPfx(lot),
+    bags:parseInt(tr.querySelector('.fb').value)||0,
     jdg:tr.querySelector('.fj')?.value||'',
     notes:tr.querySelector('.fn').value,
-    nc:tr.querySelector('.fc').value,at:new Date().toISOString()});
+    nc:tr.querySelector('.fc').value};
+  const logEntry={type:'del',wh:curWH,loc:curLoc,...rowData,at:new Date().toISOString()};
+  db.log.push(logEntry);
+  _deletedUndo={rowData,idx,wh:curWH,loc:curLoc,logIdx:db.log.length-1};
   tr.remove();
   if(!document.querySelector('#tbody tr.dr')){
     const em=document.createElement('tr'); em.className='empty-msg';
     em.innerHTML='<td colspan="9">まだ記録がありません。</td>';
     document.getElementById('tbody').insertBefore(em,document.querySelector('#tbody .add-tr'));
   }
-  autoSave(); snack(`${label} を出庫しました`);
+  autoSave();
+  snackUndo(`${label} を削除しました`);
+}
+function undoDelete(){
+  if(!_deletedUndo) return;
+  const {rowData,idx,wh,loc,logIdx}=_deletedUndo;
+  _deletedUndo=null;
+  clearTimeout(_undoTimer);
+  db.log.splice(logIdx,1);
+  if(!db.stock[key(wh,loc)]) db.stock[key(wh,loc)]=[];
+  db.stock[key(wh,loc)].splice(idx,0,rowData);
+  saveDB();
+  if(wh===curWH&&loc===curLoc) renderStockTable();
+  snack('元に戻しました');
+}
+function snackUndo(msg){
+  clearTimeout(_st); clearTimeout(_undoTimer);
+  const el=document.getElementById('snack');
+  el.innerHTML=`<span>${msg}</span><button onclick="undoDelete()" style="margin-left:10px;background:none;border:none;color:#90CAF9;font-size:13px;font-weight:700;cursor:pointer;padding:2px 4px">元に戻す</button>`;
+  el.classList.add('show');
+  _undoTimer=setTimeout(()=>{ el.classList.remove('show'); _deletedUndo=null; },5000);
 }
 
 // ── Judgment table ────────────────────────────────────────────
