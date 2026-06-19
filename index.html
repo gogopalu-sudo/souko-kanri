@@ -158,6 +158,13 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .agg-bags{font-size:13px;font-weight:700;color:#212121;flex:1}
 .agg-loc{font-size:11px;color:#757575;text-align:right;white-space:nowrap}
 
+/* ── FAB buttons ── */
+#fab-wrap{position:fixed;right:14px;bottom:64px;z-index:200;display:flex;flex-direction:column;gap:10px}
+.fab{width:50px;height:50px;border-radius:50%;color:#fff;font-size:20px;border:none;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.fab:active{opacity:.8;transform:scale(.93)}
+#fab-backup{background:#1A237E}
+#fab-print{background:#1B5E20}
+
 /* ── Bottom bar ── */
 #btm{background:#F5F5F5;border-top:1px solid #E0E0E0;padding:7px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0}
 .btn-green{background:#388E3C;color:#fff;border:none;border-radius:18px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -218,6 +225,10 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 <div id="sub-bar"></div>
 <div id="tbl-wrap"></div>
 <div id="btm"></div>
+<div id="fab-wrap">
+  <button class="fab" id="fab-print" onclick="printAll()" title="全在庫を印刷">🖨</button>
+  <button class="fab" id="fab-backup" onclick="expJSON()" title="バックアップ保存">💾</button>
+</div>
 
 <script>
 // ── Constants ────────────────────────────────────────────────
@@ -233,8 +244,8 @@ const WH = {
              'CB-11','CB-12','CB-13','CB-14','CB-15','CB-16','CB-17','CB-18','CB-19','CB-20','CB-21',
              'C倉庫通路左','C倉庫通路右']
 };
-const PRODS = ['600S','600H','645','300S','300S-A','100F','シリカA','TPS','SPA','6B'];
-const JDGS  = ['O','N','△','300H','中身SA N','X'];
+const PRODS = ['600S','600H','645','300S','300S-A','100F','シリカA','TPS','SPA','6B','M-1','クリサットV','フロエース','NPC','HS110'];
+const JDGS  = ['O','N','△','300H','中身SA N','X','キリン','秋田十條','サッポロ','サントリー','フジ日本'];
 const JCOL  = {
   'O':{'bg':'#E8F5E9','fg':'#2E7D32'},
   'N':{'bg':'#E3F2FD','fg':'#1565C0'},
@@ -254,6 +265,8 @@ let expandedProds = new Set();
 let expandedLots  = new Set();
 let sumView = 'list';
 let sumProdFilter = '';
+let sumSortCol = 'prod';
+let sumSortDir = 1;
 let expandedAggProds = new Set();
 let expandedAggJdgs  = new Set();
 
@@ -348,7 +361,7 @@ function collectStockRows(){
     lot:tr.querySelector('.fl').value.trim(),
     lotPfx:lotPfx(tr.querySelector('.fl').value),
     bags:parseInt(tr.querySelector('.fb').value)||50,
-    jdg:tr.querySelector('.jdg-cell')?.dataset.jdg||'',
+    jdg:tr.querySelector('.fj')?.value||'',
     notes:tr.querySelector('.fn').value,
     nc:tr.querySelector('.fc').value,
   }));
@@ -357,6 +370,27 @@ function jBadgeHTML(jdg){
   if(!jdg) return '<span style="color:#9E9E9E;padding:0 8px;font-size:13px">—</span>';
   const c=JCOL[jdg]||{bg:'#EEE',fg:'#616161'};
   return `<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:13px;font-weight:700;background:${c.bg};color:${c.fg}">${jdg}</span>`;
+}
+function applyJdgSel(sel){
+  const jdg=sel.value, c=JCOL[jdg]||{bg:'#fff',fg:'#9E9E9E'};
+  sel.style.background=c.bg; sel.style.color=c.fg;
+  sel.style.borderColor=jdg?c.bg:'#CCC';
+}
+function syncStockJdg(sel){
+  applyJdgSel(sel);
+  const tr=sel.closest('tr');
+  const prod=tr.querySelector('.fp').value, sn=tr.querySelector('.fl').value.trim();
+  const newJdg=sel.value;
+  if(sn){
+    const pfx=lotPfx(sn);
+    if(!db.jdgTable[prod]) db.jdgTable[prod]={};
+    if(!db.jdgTable[prod][pfx]) db.jdgTable[prod][pfx]=[];
+    const entries=db.jdgTable[prod][pfx];
+    const entry=entries.find(e=>e.sn===sn)||entries.find(e=>e.sn===pfx);
+    if(entry){ entry.jdg=newJdg; }
+    else{ entries.push({id:uid(),sn,jdg:newJdg,notes:tr.querySelector('.fn').value||'',nc:''}); snack(`${sn} を判定表に追加しました`); }
+  }
+  autoSave();
 }
 function collectJdgRows(){
   return [...document.querySelectorAll('#tbody tr.jr')].map(tr=>({
@@ -510,6 +544,7 @@ function renderSumBar(){
 }
 function setSumView(v){ sumView=v; expandedAggProds.clear(); expandedAggJdgs.clear(); renderSummary(); }
 function setSumFilter(p){ sumProdFilter=p; renderSummary(); }
+function setSumSort(col){ sumSortDir=(sumSortCol===col)?-sumSortDir:1; sumSortCol=col; renderSummary(); }
 function renderSumFilter(allProds){
   const sf=document.getElementById('sum-filter'); if(!sf) return;
   sf.innerHTML=`<button class="sfbtn ${sumProdFilter===''?'on':''}" onclick="setSumFilter('')">全て</button>`
@@ -526,9 +561,21 @@ function renderJdgInfoBar(){
 }
 
 // ── Stock table ───────────────────────────────────────────────
+function moveStockRow(id, dir){
+  autoSave();
+  const rows=db.stock[key(curWH,curLoc)]||[];
+  const idx=rows.findIndex(r=>r.id===id);
+  const to=idx+dir;
+  if(idx<0||to<0||to>=rows.length) return;
+  [rows[idx],rows[to]]=[rows[to],rows[idx]];
+  db.stock[key(curWH,curLoc)]=rows;
+  saveDB();
+  renderStockTable();
+}
 function renderStockTable(){
   document.getElementById('tbl-head').innerHTML=`<tr>
     <th class="th-del td-del">出庫</th>
+    <th class="td-move" style="text-align:center;width:36px">↕</th>
     <th class="td-prod">品名</th>
     <th class="td-lot">製造番号</th>
     <th class="td-bags">袋数</th>
@@ -542,33 +589,37 @@ function renderStockTable(){
   tbody.innerHTML='';
   if(!rows.length){
     const em=document.createElement('tr'); em.className='empty-msg';
-    em.innerHTML='<td colspan="8">まだ記録がありません。「＋ 入庫を追加」で追加。</td>';
+    em.innerHTML='<td colspan="9">まだ記録がありません。「＋ 入庫を追加」で追加。</td>';
     tbody.appendChild(em);
   } else {
     rows.forEach(r=>tbody.appendChild(makeStockRow(r)));
-    // 判定表から全行を一括反映（後追い登録に対応）
     document.querySelectorAll('#tbody tr.dr').forEach(tr=>tryAutoFill(tr,true));
     saveDB();
   }
   const at=document.createElement('tr'); at.className='add-tr';
-  at.innerHTML='<td colspan="8"><button class="add-tr-btn" onclick="addStockRow()">＋ 行を追加（入庫）</button></td>';
+  at.innerHTML='<td colspan="9"><button class="add-tr-btn" onclick="addStockRow()">＋ 行を追加（入庫）</button></td>';
   tbody.appendChild(at);
 }
 function makeStockRow(data){
   const tr=document.createElement('tr'); tr.className='dr'; tr.dataset.id=data.id;
   const pOpts=PRODS.map(p=>`<option value="${p}"${data.prod===p?' selected':''}>${p}</option>`).join('');
   const pfx=data.lotPfx||lotPfx(data.lot);
+  const c=JCOL[data.jdg]||{bg:'#fff',fg:'#9E9E9E'};
+  const js=`background:${c.bg};color:${c.fg};border:1.5px solid ${data.jdg?c.bg:'#CCC'};border-radius:10px;font-weight:700;font-size:12px;padding:3px 4px;width:100%;font-family:inherit;cursor:pointer`;
+  const jOpts=['<option value="">—</option>',...JDGS.map(j=>`<option value="${esc(j)}"${data.jdg===j?' selected':''}>${esc(j)}</option>`)].join('');
+  const mvBtn='background:none;border:none;color:#90CAF9;font-size:13px;padding:1px 3px;cursor:pointer;display:block;line-height:1.2;width:100%';
   tr.innerHTML=`
     <td class="td-del"><button class="del" onclick="delStockRow('${data.id}')">✕</button></td>
+    <td class="td-move" style="text-align:center;padding:2px;width:36px">
+      <button style="${mvBtn}" onclick="moveStockRow('${data.id}',-1)">▲</button>
+      <button style="${mvBtn}" onclick="moveStockRow('${data.id}',1)">▼</button>
+    </td>
     <td class="td-prod"><select class="cs fp" onchange="onProdChange(this);autoSave()">
       <option value="">—</option>${pOpts}</select></td>
-    <td class="td-lot">
-      <input class="ci fl" type="text" value="${esc(data.lot)}"
-        oninput="onLotInput(this)" onblur="onLotBlur(this)" placeholder="製造番号（6桁）">
-    </td>
+    <td class="td-lot"><input class="ci fl" type="text" value="${esc(data.lot)}"
+      oninput="onLotInput(this)" onblur="onLotBlur(this)" placeholder="製造番号（6桁）"></td>
     <td class="td-bags"><input class="ci fb" type="number" value="${data.bags||50}" min="1" onblur="autoSave()"></td>
-    <td class="td-jdg" style="text-align:center;padding:4px">
-      <div class="jdg-cell" data-jdg="${esc(data.jdg)}">${jBadgeHTML(data.jdg)}</div></td>
+    <td class="td-jdg" style="padding:4px"><select class="fj" style="${js}" onchange="syncStockJdg(this)">${jOpts}</select></td>
     <td class="td-notes"><input class="ci fn" type="text" value="${esc(data.notes)}" onblur="syncStockNotes(this)" placeholder="備考"></td>
     <td class="td-nc"><input class="ci fc" type="text" readonly value="${esc(data.nc)}"
       placeholder="(判定表から自動)" style="background:#F3F4FE;color:#37474F;cursor:default"></td>
@@ -591,11 +642,11 @@ function tryAutoFill(tr, quiet=false){
   const prod=tr.querySelector('.fp').value, sn=tr.querySelector('.fl').value.trim();
   if(!sn) return;
   const m=lookupJdg(prod,sn); if(!m) return;
-  const jCell=tr.querySelector('.jdg-cell');
-  if(jCell){
-    jCell.dataset.jdg=m.jdg;
-    jCell.innerHTML=jBadgeHTML(m.jdg);
-    if(!quiet){ jCell.classList.remove('af'); void jCell.offsetWidth; jCell.classList.add('af'); }
+  const jSel=tr.querySelector('.fj');
+  if(jSel && m.jdg){
+    jSel.value=m.jdg;
+    applyJdgSel(jSel);
+    if(!quiet){ jSel.classList.remove('af'); void jSel.offsetWidth; jSel.classList.add('af'); }
   }
   if(m.nc!==undefined){ const ncEl=tr.querySelector('.fc'); ncEl.value=m.nc; }
   { const nEl=tr.querySelector('.fn'); if(nEl&&m.notes) nEl.value=m.notes; }
@@ -638,13 +689,13 @@ function delStockRow(id){
   const lot=tr.querySelector('.fl').value.trim();
   db.log.push({type:'del',wh:curWH,loc:curLoc,prod:tr.querySelector('.fp').value,lot,
     lotPfx:lotPfx(lot),bags:parseInt(tr.querySelector('.fb').value)||0,
-    jdg:tr.querySelector('.jdg-cell')?.dataset.jdg||'',
+    jdg:tr.querySelector('.fj')?.value||'',
     notes:tr.querySelector('.fn').value,
     nc:tr.querySelector('.fc').value,at:new Date().toISOString()});
   tr.remove();
   if(!document.querySelector('#tbody tr.dr')){
     const em=document.createElement('tr'); em.className='empty-msg';
-    em.innerHTML='<td colspan="8">まだ記録がありません。</td>';
+    em.innerHTML='<td colspan="9">まだ記録がありません。</td>';
     document.getElementById('tbody').insertBefore(em,document.querySelector('#tbody .add-tr'));
   }
   autoSave(); snack(`${label} を出庫しました`);
@@ -866,20 +917,35 @@ function renderSummary(){
   const allProds=[...new Set(rows.map(r=>r.prod))].sort((a,b)=>(PRODS.indexOf(a)<0?99:PRODS.indexOf(a))-(PRODS.indexOf(b)<0?99:PRODS.indexOf(b)));
   renderSumFilter(allProds);
   const filtered=sumProdFilter?rows.filter(r=>r.prod===sumProdFilter):rows;
+  const prodIdx=p=>PRODS.indexOf(p)<0?99:PRODS.indexOf(p);
+  const jdgIdx=j=>JDGS.indexOf(j)<0?99:JDGS.indexOf(j);
   filtered.sort((a,b)=>{
-    const po=(PRODS.indexOf(a.prod)<0?99:PRODS.indexOf(a.prod))-(PRODS.indexOf(b.prod)<0?99:PRODS.indexOf(b.prod));
-    if(po) return po;
-    if(a.pfx<b.pfx) return -1; if(a.pfx>b.pfx) return 1;
-    return (a.sn||'').localeCompare(b.sn||'');
+    let v=0;
+    switch(sumSortCol){
+      case 'prod': v=prodIdx(a.prod)-prodIdx(b.prod); break;
+      case 'pfx':  v=(a.pfx||'').localeCompare(b.pfx||''); break;
+      case 'sn':   v=(a.sn||'').localeCompare(b.sn||''); break;
+      case 'jdg':  v=jdgIdx(a.jdg)-jdgIdx(b.jdg); break;
+      case 'bags': v=a.bags-b.bags; break;
+      case 'loc':  v=(a.wh+a.loc).localeCompare(b.wh+b.loc); break;
+    }
+    if(v===0) v=prodIdx(a.prod)-prodIdx(b.prod);
+    if(v===0) v=(a.sn||'').localeCompare(b.sn||'');
+    return v*sumSortDir;
   });
+  const sh=(col,label,style='')=>{
+    const on=sumSortCol===col, arr=on?(sumSortDir===1?' ▲':' ▼'):'';
+    return `<th style="cursor:pointer;user-select:none;${on?'background:#0D1B6E;':''};${style}" onclick="setSumSort('${col}')">${label}${arr}</th>`;
+  };
   let html=`<table class="sum-tbl"><thead><tr>
-    <th style="width:70px">品名</th><th style="width:46px">ロット</th>
-    <th style="width:82px">製造番号</th><th style="width:74px;text-align:center">判定</th>
-    <th style="width:52px;text-align:right">袋数</th><th>場所</th>
+    ${sh('prod','品名','width:70px')}${sh('pfx','ロット','width:46px')}
+    ${sh('sn','製造番号','width:82px')}${sh('jdg','判定','width:74px;text-align:center')}
+    ${sh('bags','袋数','width:52px;text-align:right')}${sh('loc','場所')}
   </tr></thead><tbody>`;
+  const showGrp=sumSortCol==='prod';
   let lastProd='';
   filtered.forEach(r=>{
-    if(r.prod!==lastProd){
+    if(showGrp&&r.prod!==lastProd){
       const tb=filtered.filter(x=>x.prod===r.prod).reduce((s,x)=>s+(x.bags||0),0);
       html+=`<tr class="sum-grp"><td colspan="6">${r.prod}　${tb}袋 / ${ton(tb)}</td></tr>`;
       lastProd=r.prod;
@@ -983,6 +1049,7 @@ function expLogCSV(){
   dlCSV([hdr,...db.log.map(r=>[fmtDT(r.at),r.wh,r.loc,r.prod,r.lot,r.lotPfx||lotPfx(r.lot||''),r.bags,r.jdg,r.notes,r.nc])],'倉庫管理_出庫履歴_'+today()+'.csv'); snack('出庫履歴CSVエクスポートしました');
 }
 function expJSON(){ dlBlob(JSON.stringify(db,null,2),'application/json','倉庫管理_'+today()+'.json'); snack('バックアップ保存しました'); }
+function quickSave(){ expJSON(); setTimeout(()=>printAll(),400); }
 function impJSON(){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
   inp.onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
