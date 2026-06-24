@@ -60,7 +60,7 @@ body{display:flex;flex-direction:column}
 .jdg-info-bar{background:#388E3C;color:#fff;padding:3px 10px;font-size:11px;display:flex;gap:14px;line-height:1.6}
 
 /* ── Table wrap ── */
-#tbl-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+#tbl-wrap{flex:1;overflow:auto}
 
 /* ── Table (stock) – horizontal scroll ── */
 .tbl-scroll{border-collapse:collapse;table-layout:fixed;min-width:600px;width:100%}
@@ -104,9 +104,9 @@ td{padding:0;vertical-align:middle;border-right:1px solid #EEEEEE}
 .td-lpfx{width:56px;min-width:56px;text-align:center;font-size:13px;font-weight:700;color:#5C6BC0}
 
 /* ── Delete button ── */
-.del{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.del{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;touch-action:manipulation}
 .del:active{background:#C62828;color:#fff}
-.del-g{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.del-g{width:32px;height:32px;border-radius:50%;background:#FFEBEE;border:1.5px solid #FFCDD2;color:#C62828;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;touch-action:manipulation}
 .del-g:active{background:#C62828;color:#fff}
 
 /* ── Empty / Add rows ── */
@@ -245,7 +245,7 @@ const WH = {
              'C倉庫通路左','C倉庫通路右']
 };
 const PRODS = ['600S','600H','645','300S','300S-A','100F','シリカA','TPS','SPA','6B','M-1','クリサットV','フロエース','NPC','HS110'];
-const JDGS  = ['O','N','△','300H','中身SA N','X','キリン','秋田十條','サッポロ','サントリー','フジ日本','HK'];
+const JDGS  = ['O','N','△','300H','中身SA N','X','キリン','秋田十條','サッポロ','サントリー','フジ日本','HK','FA'];
 const JCOL  = {
   'O':{'bg':'#E8F5E9','fg':'#2E7D32'},
   'N':{'bg':'#E3F2FD','fg':'#1565C0'},
