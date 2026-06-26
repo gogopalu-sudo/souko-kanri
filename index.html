@@ -1134,13 +1134,18 @@ function printAll(){
   openPrint(html);
 }
 function openPrint(body){
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>倉庫管理</title>
-    <style>body{font-family:'Meiryo',sans-serif;font-size:12px;padding:10px}h2{font-size:16px;margin:0 0 4px}
+  const f=document.createElement('iframe');
+  f.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;border:none';
+  document.body.appendChild(f);
+  const css=`body{font-family:'Meiryo',sans-serif;font-size:12px;padding:10px}h2{font-size:16px;margin:0 0 4px}
     h3{font-size:14px;margin:12px 0 4px;color:#1A237E}h4{font-size:13px;margin:8px 0 3px}
     table{border-collapse:collapse;width:100%;margin-bottom:8px}th,td{border:1px solid #ccc;padding:3px 6px;font-size:11px}
-    th{background:#283593;color:#fff}tr:nth-child(even){background:#f5f5f5}</style></head><body>${body}</body></html>`);
-  w.document.close(); w.print();
+    th{background:#283593;color:#fff}tr:nth-child(even){background:#f5f5f5}`;
+  f.contentDocument.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>倉庫管理</title><style>${css}</style></head><body>${body}</body></html>`);
+  f.contentDocument.close();
+  f.contentWindow.focus();
+  f.contentWindow.print();
+  setTimeout(()=>document.body.removeChild(f),2000);
 }
 
 // ── Init ─────────────────────────────────────────────────────
