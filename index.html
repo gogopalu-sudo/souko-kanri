@@ -21,14 +21,14 @@ body{display:flex;flex-direction:column}
 .mode-tab.on{color:#fff;border-bottom-color:#FFEB3B}
 
 /* ── Stock: warehouse tabs ── */
-#wh-bar{background:#1A237E;display:flex;flex-shrink:0}
-.wh-tab{flex:1;padding:9px 4px;text-align:center;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
+#wh-bar{background:#1A237E;display:flex;flex-shrink:0;padding-bottom:4px}
+.wh-tab{flex:1;padding:11px 4px;text-align:center;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
 .wh-tab.on{color:#fff;border-bottom-color:#FFEB3B}
 
 /* ── Stock: location tabs ── */
-#loc-bar{background:#E8EAF6;border-bottom:2px solid #3F51B5;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#loc-bar{background:#E8EAF6;border-top:3px solid #3F51B5;border-bottom:2px solid #3F51B5;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 #loc-bar::-webkit-scrollbar{display:none}
-#loc-inner{display:flex;padding:5px 6px;gap:4px;min-width:max-content}
+#loc-inner{display:flex;padding:8px 8px;gap:6px;min-width:max-content}
 .loc-tab{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:#fff;color:#3F51B5;border:1.5px solid #C5CAE9}
 .loc-tab.has{background:#C5CAE9;border-color:#3F51B5}
 .loc-tab.on{background:#3F51B5;color:#fff;border-color:#3F51B5}
@@ -238,11 +238,11 @@ const WH = {
              '1号倉庫通路右','1号倉庫通路左'],
   'ひさし': ['ひさし1','ひさし2','ひさし3','ひさし4','ひさし5'],
   'B倉庫':  ['B-1','B-2','B-3','B-4','B-5','B-6','B-7','B-8','B-9'],
-  'C倉庫':  ['CA-1','CA-2','CA-3','CA-4','CA-5','CA-6','CA-7','CA-8','CA-9','CA-10',
-             'CA-11','CA-12','CA-13','CA-14','CA-15','CA-16','CA-17','CA-18','CA-19','CA-20','CA-21',
-             'CB-1','CB-2','CB-3','CB-4','CB-5','CB-6','CB-7','CB-8','CB-9','CB-10',
-             'CB-11','CB-12','CB-13','CB-14','CB-15','CB-16','CB-17','CB-18','CB-19','CB-20','CB-21',
-             'C倉庫通路左','C倉庫通路右']
+  'C倉庫（CA）':['CA-1','CA-2','CA-3','CA-4','CA-5','CA-6','CA-7','CA-8','CA-9','CA-10',
+               'CA-11','CA-12','CA-13','CA-14','CA-15','CA-16','CA-17','CA-18','CA-19','CA-20','CA-21',
+               'C倉庫通路左','C倉庫通路右'],
+  'C倉庫（CB）':['CB-1','CB-2','CB-3','CB-4','CB-5','CB-6','CB-7','CB-8','CB-9','CB-10',
+               'CB-11','CB-12','CB-13','CB-14','CB-15','CB-16','CB-17','CB-18','CB-19','CB-20','CB-21']
 };
 const PRODS = ['600S','600H','645','300S','300S-A','100F','シリカA','TPS','SPA','6B','M-1','クリサットV','フロエース','NPC','HS110'];
 const JDGS  = ['O','N','△','300H','中身SA N','X','キリン','秋田十條','サッポロ','サントリー','フジ日本','HK','FA'];
@@ -318,6 +318,16 @@ function loadDB(){
     if(!db.log)        db.log=[];
     if(!db.loggedIds)  db.loggedIds=[];
     if(!db.jdgTable||Array.isArray(db.jdgTable)) db.jdgTable={};
+    // C倉庫 → C倉庫（CA）/ C倉庫（CB）移行
+    Object.keys(db.stock).forEach(k=>{
+      if(!k.startsWith('C倉庫::')) return;
+      const loc=k.slice('C倉庫::'.length);
+      const newWh=loc.startsWith('CB-')?'C倉庫（CB）':'C倉庫（CA）';
+      const newKey=`${newWh}::${loc}`;
+      if(!db.stock[newKey]) db.stock[newKey]=db.stock[k];
+      delete db.stock[k];
+    });
+    db.log.forEach(e=>{ if(e.wh==='C倉庫') e.wh=(e.loc||'').startsWith('CB-')?'C倉庫（CB）':'C倉庫（CA）'; });
   } catch(e){ console.error('loadDB:',e); db={stock:{},log:[],jdgTable:{}}; }
 }
 function saveDB(){
@@ -689,6 +699,21 @@ function delStockRow(id){
   const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
   const lot=tr.querySelector('.fl').value.trim();
   const prod=tr.querySelector('.fp').value;
+  const bags=parseInt(tr.querySelector('.fb').value)||0;
+  const info=[prod,lot,bags+'袋'].filter(Boolean).join('　');
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">出庫の確認</div>
+    <div class="dlg-sub" style="margin-bottom:16px">${info}</div>
+    <button class="dlg-ok" style="background:#C62828;margin-bottom:4px" onclick="confirmDelStockRow('${id}');closeOv()">出庫する</button>
+    <div class="dlg-c" onclick="closeOv()">キャンセル</div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function confirmDelStockRow(id){
+  const tr=document.querySelector(`#tbody tr[data-id="${id}"]`); if(!tr) return;
+  const lot=tr.querySelector('.fl').value.trim();
+  const prod=tr.querySelector('.fp').value;
   const label=lot||prod||'行';
   const rows=db.stock[key(curWH,curLoc)]||[];
   const idx=rows.findIndex(r=>r.id===id);
@@ -697,8 +722,7 @@ function delStockRow(id){
     jdg:tr.querySelector('.fj')?.value||'',
     notes:tr.querySelector('.fn').value,
     nc:tr.querySelector('.fc').value};
-  const logEntry={type:'del',wh:curWH,loc:curLoc,...rowData,at:new Date().toISOString()};
-  db.log.push(logEntry);
+  db.log.push({type:'del',wh:curWH,loc:curLoc,...rowData,at:new Date().toISOString()});
   _deletedUndo={rowData,idx,wh:curWH,loc:curLoc,logIdx:db.log.length-1};
   tr.remove();
   if(!document.querySelector('#tbody tr.dr')){
